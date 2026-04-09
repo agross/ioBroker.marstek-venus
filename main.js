@@ -259,7 +259,7 @@ class MarstekVenusAdapter extends utils.Adapter {
                 this.pendingRequests.delete(id);
                 this.log.warn(`sendRequest ${method} to ${targetIP}:${this.config.udpPort} timed out`);
                 reject(new Error(`Request ${method} timed out`));
-            }, 5000);
+            }, 15000);
 
             this.pendingRequests.set(id, { resolve, reject, timeout });
 
