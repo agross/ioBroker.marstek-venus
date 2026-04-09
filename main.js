@@ -601,7 +601,10 @@ class MarstekVenusAdapter extends utils.Adapter {
     async onMessage(obj) {
         if (obj.command === 'discover') {
             await this.discoverDevices();
-            if (obj.callback) this.sendTo(obj.from, obj.command, { success: true }, obj.callback);
+            if (obj.callback) this.sendTo(obj.from, obj.command, { 
+                success: !!this.discoveredIP, 
+                ipAddress: this.discoveredIP || null 
+            }, obj.callback);
         }
     }
 

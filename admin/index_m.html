@@ -75,6 +75,21 @@
             const msg = event.data;
             if (msg && msg.command === 'sendTo' && msg.data) {
                 console.log('Response from adapter:', msg.data);
+                
+                // Handle discover command response
+                if (msg.data.command === 'discover' && msg.data.success) {
+                    if (msg.data.ipAddress) {
+                        document.getElementById('ipAddress').value = msg.data.ipAddress;
+                        showMessage(`Device discovered successfully at ${msg.data.ipAddress}`, 'success');
+                    } else if (msg.data.devices && msg.data.devices.length > 0) {
+                        // Use first discovered device
+                        const firstDevice = msg.data.devices[0];
+                        if (firstDevice.ipAddress) {
+                            document.getElementById('ipAddress').value = firstDevice.ipAddress;
+                        }
+                        showMessage(`Found ${msg.data.devices.length} device(s) on network`, 'success');
+                    }
+                }
             }
         });
     </script>

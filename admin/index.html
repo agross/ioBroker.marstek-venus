@@ -54,6 +54,8 @@
             document.getElementById('pollInterval').value = saved.pollInterval || '1000';
         }
         
+        let discoveryTimeout = null;
+
         function discover() {
             const status = document.getElementById('uiStatus');
             status.textContent = 'Discovering devices...';
@@ -63,7 +65,13 @@
                 instance: 'marstek-venus.0',
                 data: { command: 'discover' }
             }, '*');
-            setTimeout(() => {
+            
+            // Clear any existing timeout first
+            if (discoveryTimeout) {
+                clearTimeout(discoveryTimeout);
+            }
+            
+            discoveryTimeout = setTimeout(() => {
                 if (status.textContent === 'Discovering devices...') {
                     status.textContent = 'No response from adapter. Check logs.';
                     status.style.color = 'red';
@@ -97,10 +105,24 @@
         window.addEventListener('message', (event) => {
             const msg = event.data;
             const status = document.getElementById('uiStatus');
+            
             if (msg && msg.command === 'returnStatus') {
+                // Clear timeout when any response is received
+                if (discoveryTimeout) {
+                    clearTimeout(discoveryTimeout);
+                    discoveryTimeout = null;
+                }
+                
                 if (msg.status === 'ok') {
-                    status.textContent = 'Discovery successful.';
-                    status.style.color = 'green';
+                    if (msg.ipAddress) {
+                        // Populate IP address field
+                        document.getElementById('ipAddress').value = msg.ipAddress;
+                        status.textContent = `Device found at ${msg.ipAddress}, IP address populated.`;
+                        status.style.color = 'green';
+                    } else {
+                        status.textContent = 'Discovery successful. No device found.';
+                        status.style.color = 'blue';
+                    }
                 } else {
                     status.textContent = 'Discovery failed: ' + (msg.error || 'unknown error');
                     status.style.color = 'red';
