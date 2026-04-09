@@ -233,7 +233,7 @@ class MarstekVenusAdapter extends utils.Adapter {
                 });
                 
                 // Wait a bit between attempts
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 25000));
             } catch (err) {
                 this.log.error(`Error during discovery attempt: ${err.message}`);
             }
@@ -260,7 +260,7 @@ class MarstekVenusAdapter extends utils.Adapter {
                 this.pendingRequests.delete(id);
                 this.log.warn(`sendRequest ${method} to ${targetIP}:${this.config.udpPort} timed out`);
                 reject(new Error(`Request ${method} timed out`));
-            }, 10000);
+            }, 20000);
 
             this.pendingRequests.set(id, { resolve, reject, timeout });
 
@@ -280,7 +280,7 @@ class MarstekVenusAdapter extends utils.Adapter {
                         this.log.debug(`Broadcast retry for ${method} failed: ${err.message}`);
                     }
                 });
-            }, 100);
+            }, 25000);
         });
     }
 
