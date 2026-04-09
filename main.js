@@ -28,6 +28,10 @@ class MarstekVenusAdapter extends utils.Adapter {
         
         await this.initStates();
 
+        await this.setStateAsync('control.mode', { val: 'Auto', ack: true });
+        await this.setStateAsync('control.passivePower', { val: 0, ack: true });
+        await this.setStateAsync('control.passiveDuration', { val: 300, ack: true });
+
         this.socket = dgram.createSocket('udp4');
         
         this.socket.on('error', (err) => {
@@ -255,6 +259,9 @@ class MarstekVenusAdapter extends utils.Adapter {
                         });
                         this.log.info(`Auto-selecting discovered device: ${this.config.ipAddress}`);
                         this.startPolling();
+                        this.setStateAsync('info.device', { val: response.result.device, ack: true });
+                        this.setStateAsync('info.firmware', { val: response.result.ver, ack: true });
+                        this.setStateAsync('info.mac', { val: response.result.ble_mac || response.result.wifi_mac, ack: true });
                     } else {
                         this.log.info(`Device discovered but using configured IP: ${this.config.ipAddress}`);
                     }
@@ -279,14 +286,14 @@ class MarstekVenusAdapter extends utils.Adapter {
 
     async poll() {
         try {
-        await this.pollESStatus();
-        await this.pollBatteryStatus();
-        await this.pollPVStatus();
-        await this.pollWifiStatus();
-        await this.pollBLEStatus();
-        await this.pollEMStatus();
-        await this.pollModeStatus();
-            
+            await this.pollESStatus();
+            await this.pollBatteryStatus();
+            await this.pollPVStatus();
+            await this.pollWifiStatus();
+            await this.pollBLEStatus();
+            await this.pollEMStatus();
+            await this.pollModeStatus();
+
             await this.setStateAsync('info.connection', { val: true, ack: true });
         } catch (err) {
             this.log.debug(`Poll failed: ${err.message}`);
