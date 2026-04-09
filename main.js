@@ -247,6 +247,7 @@ class MarstekVenusAdapter extends utils.Adapter {
             const targetIP = this.discoveredIP || this.config.ipAddress;
             
             if (!targetIP) {
+                this.log.error(`sendRequest ${method}: No target IP configured`);
                 reject(new Error(`No target IP configured`));
                 return;
             }
@@ -256,16 +257,17 @@ class MarstekVenusAdapter extends utils.Adapter {
 
             const timeout = setTimeout(() => {
                 this.pendingRequests.delete(id);
+                this.log.warn(`sendRequest ${method} to ${targetIP}:${this.config.udpPort} timed out`);
                 reject(new Error(`Request ${method} timed out`));
             }, 5000);
 
             this.pendingRequests.set(id, { resolve, reject, timeout });
 
-            this.log.debug(`Sending ${method} to ${targetIP}:${this.config.udpPort}`);
             this.socket.send(message, 0, message.length, this.config.udpPort, targetIP, (err) => {
                 if (err) {
                     clearTimeout(timeout);
                     this.pendingRequests.delete(id);
+                    this.log.error(`sendRequest ${method} to ${targetIP} send error: ${err.message}`);
                     reject(err);
                 }
             });
