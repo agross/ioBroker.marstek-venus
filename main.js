@@ -16,6 +16,7 @@ class MarstekVenusAdapter extends utils.Adapter {
         this.pendingRequests = new Map();
         this.pollInterval = null;
         this.deviceInfo = null;
+        this.discoveredIP = null;
 
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
@@ -208,7 +209,7 @@ class MarstekVenusAdapter extends utils.Adapter {
 
             this.pendingRequests.set(id, { resolve, reject, timeout, method });
 
-            this.socket.send(message, 0, message.length, this.config.udpPort, this.config.ipAddress, (err) => {
+            this.socket.send(message, 0, message.length, this.config.udpPort, this.discoveredIP || this.config.ipAddress, (err) => {
                 if (err) {
                     clearTimeout(timeout);
                     this.pendingRequests.delete(id);
@@ -242,22 +243,8 @@ class MarstekVenusAdapter extends utils.Adapter {
                 // Validate that we got useful information
                 if (response.result && response.result.ip) {
                     if (!this.config.ipAddress) {
-                        this.config.ipAddress = response.result.ip;
-                        this.getForeignObject("system.adapter." + this.namespace, (err, obj) => {
-                            if (err) {
-                                this.log.error(`Failed to get adapter object: ${err}`);
-                                return;
-                            }
-                            obj.native.ipAddress = this.config.ipAddress;
-                            this.setForeignObject("system.adapter." + this.namespace, obj, (err) => {
-                                if (err) {
-                                    this.log.error(`Failed to update adapter config: ${err}`);
-                                } else {
-                                    this.log.info(`Updated adapter config with IP: ${this.config.ipAddress}`);
-                                }
-                            });
-                        });
-                        this.log.info(`Auto-selecting discovered device: ${this.config.ipAddress}`);
+                        this.discoveredIP = response.result.ip;
+                        this.log.info(`Auto-selecting discovered device: ${this.discoveredIP}`);
                         this.startPolling();
                         this.setStateAsync('info.device', { val: response.result.device, ack: true });
                         this.setStateAsync('info.firmware', { val: response.result.ver, ack: true });
@@ -313,6 +300,7 @@ class MarstekVenusAdapter extends utils.Adapter {
         await this.setStateChangedAsync('energy.gridExport', { val: result.total_grid_output_energy, ack: true });
         await this.setStateChangedAsync('energy.gridImport', { val: result.total_grid_input_energy, ack: true });
         await this.setStateChangedAsync('energy.loadTotal', { val: result.total_load_energy, ack: true });
+        await this.setStateChangedAsync('battery.soc', { val: result.bat_soc, ack: true });
     }
 
     async pollBatteryStatus() {
