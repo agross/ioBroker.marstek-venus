@@ -244,7 +244,13 @@ class MarstekVenusAdapter extends utils.Adapter {
     async sendRequest(method, params = {}) {
         return new Promise((resolve, reject) => {
             const id = this.requestId++;
+            const targetIP = this.discoveredIP || this.config.ipAddress;
             
+            if (!targetIP) {
+                reject(new Error(`No target IP configured`));
+                return;
+            }
+
             const request = { id, method, params };
             const message = Buffer.from(JSON.stringify(request));
 
@@ -255,7 +261,8 @@ class MarstekVenusAdapter extends utils.Adapter {
 
             this.pendingRequests.set(id, { resolve, reject, timeout });
 
-            this.socket.send(message, 0, message.length, this.config.udpPort, this.discoveredIP || this.config.ipAddress, (err) => {
+            this.log.debug(`Sending ${method} to ${targetIP}:${this.config.udpPort}`);
+            this.socket.send(message, 0, message.length, this.config.udpPort, targetIP, (err) => {
                 if (err) {
                     clearTimeout(timeout);
                     this.pendingRequests.delete(id);
