@@ -231,7 +231,7 @@ class MarstekVenusAdapter extends utils.Adapter {
                     pending.resolve(response.result);
                     this.log.debug(`Request ${response.id} succeeded`);
                 }
-            } else if (response.method === 'Marstek.GetDevice') {
+            } else if (response.result && response.result.device) {
                 this.log.info(`Discovered device: ${response.result.device} at ${response.result.ip}`);
                 this.log.debug(`Device details: ${JSON.stringify(response.result)}`);
                 
