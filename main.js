@@ -279,15 +279,13 @@ class MarstekVenusAdapter extends utils.Adapter {
 
     async poll() {
         try {
-            await Promise.all([
-                this.pollESStatus(),
-                this.pollBatteryStatus(),
-                this.pollPVStatus(),
-                this.pollWifiStatus(),
-                this.pollBLEStatus(),
-                this.pollEMStatus(),
-                this.pollModeStatus()
-            ]);
+        await this.pollESStatus();
+        await this.pollBatteryStatus();
+        await this.pollPVStatus();
+        await this.pollWifiStatus();
+        await this.pollBLEStatus();
+        await this.pollEMStatus();
+        await this.pollModeStatus();
             
             await this.setStateAsync('info.connection', { val: true, ack: true });
         } catch (err) {
@@ -299,8 +297,7 @@ class MarstekVenusAdapter extends utils.Adapter {
     async pollESStatus() {
         const result = await this.sendRequest('ES.GetStatus', { id: 0 });
         
-        await this.setStateChangedAsync('battery.soc', { val: result.bat_soc, ack: true });
-        await this.setStateChangedAsync('battery.capacity', { val: result.bat_cap, ack: true });
+
         await this.setStateChangedAsync('power.pv', { val: result.pv_power, ack: true });
         await this.setStateChangedAsync('power.grid', { val: result.ongrid_power, ack: true });
         await this.setStateChangedAsync('power.battery', { val: result.bat_power, ack: true });
