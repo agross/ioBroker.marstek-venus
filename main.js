@@ -115,7 +115,7 @@ class MarstekVenusAdapter extends utils.Adapter {
             type: 'state', common: { name: 'Operating mode', type: 'string', role: 'text', read: true, write: true, states: { 'Auto': 'Auto', 'AI': 'AI', 'Manual': 'Manual', 'Passive': 'Passive' } }, native: {}
         });
         await this.setObjectNotExistsAsync('control.passivePower', {
-            type: 'state', common: { name: 'Passive mode power', type: 'number', unit: 'W', role: 'level.power', min: 0, max: 3000, read: true, write: true }, native: {}
+            type: 'state', common: { name: 'Passive mode power (positive: charge, negative: discharge)', type: 'number', unit: 'W', role: 'level.power', min: -3000, max: 3000, read: true, write: true }, native: {}
         });
         await this.setObjectNotExistsAsync('control.passiveDuration', {
             type: 'state', common: { name: 'Passive mode duration', type: 'number', unit: 's', role: 'level', min: 0, max: 86400, read: true, write: true }, native: {}
