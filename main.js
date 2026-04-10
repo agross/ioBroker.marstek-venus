@@ -15,6 +15,7 @@ class MarstekVenusAdapter extends utils.Adapter {
         this.pendingRequests = new Map();
         this.pollInterval = null;
         this.slowPollInterval = null;
+        this.fastPollInterval = null;
         this.discoveredIP = null;
         this._pollingInProgress = false;
         this._pollFailureCount = 0;
@@ -89,16 +90,18 @@ class MarstekVenusAdapter extends utils.Adapter {
                     this.pendingRequests.delete(id);
                     this.log.error(`sendRequest ${method} to ${targetIP} send error: ${err.message}`);
                     reject(err);
+                } else {
+                    setTimeout(() => {
+                        if (this.pendingRequests.has(id)) {
+                            this.socket.send(message, 0, message.length, this.config.udpPort, '255.255.255.255', (broadcastErr) => {
+                                if (broadcastErr) {
+                                    this.log.debug(`Broadcast retry for ${method} failed: ${broadcastErr.message}`);
+                                }
+                            });
+                        }
+                    }, 1000);
                 }
             });
-
-            setTimeout(() => {
-                this.socket.send(message, 0, message.length, this.config.udpPort, '255.255.255.255', (err) => {
-                    if (err) {
-                        this.log.debug(`Broadcast retry for ${method} failed: ${err.message}`);
-                    }
-                });
-            }, 1000);
         });
     }
 
@@ -151,9 +154,16 @@ class MarstekVenusAdapter extends utils.Adapter {
         }
     }
 
+    startFastPolling() {
+        this.log.info(`Starting fast polling loop (every ${this.config.fastPollInterval || 1000}ms)`);
+        this.fastPollInterval = setInterval(() => this.pollPower(), this.config.fastPollInterval || 1000);
+        this.pollPower();
+    }
+
     startPolling() {
         this.log.info('Starting polling loop');
         this.pollInterval = setInterval(() => this.poll(), this.config.pollInterval || 10000);
+        this.startFastPolling();
         this.startSlowPolling();
         this.poll();
     }
@@ -180,6 +190,7 @@ class MarstekVenusAdapter extends utils.Adapter {
 
             if (this.pollInterval) clearInterval(this.pollInterval);
             if (this.slowPollInterval) clearInterval(this.slowPollInterval);
+            if (this.fastPollInterval) clearInterval(this.fastPollInterval);
             if (this.socket) this.socket.close();
 
             for (const [id, pending] of this.pendingRequests) {

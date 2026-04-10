@@ -31,6 +31,14 @@ systemDictionary = {
         "en": "How often to query the device for data (lower values for more real-time updates, higher for less device load)",
         "de": "Wie oft das Gerät nach Daten abgefragt wird (niedrigere Werte für Echtzeit-Updates, höhere für geringere Gerätebelastung)"
     },
+    "fastPollInterval": {
+        "en": "Fast poll interval (ms) - power values",
+        "de": "Schnelles Abfrageintervall (ms) - Leistungswerte"
+    },
+    "fastPollInterval_help": {
+        "en": "How often to query power values (pv, grid, battery, load). Lower values = faster updates for power data",
+        "de": "Wie oft Leistungswerte abgefragt werden (pv, grid, battery, load). Niedrigere Werte = schnellere Updates für Leistungsdaten"
+    },
     "autoDiscovery_help": {
         "en": "Enable automatic device discovery on the local network (recommended for first-time setup)",
         "de": "Automatische Geräteerkennung im lokalen Netzwerk aktivieren (empfohlen für die Ersteinrichtung)"

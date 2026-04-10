@@ -208,8 +208,12 @@ describe('MarstekVenusAdapter', function() {
     describe('sendRequest()', () => {
         beforeEach(async () => {
             await adapter.onReady();
+            if (adapter.pollInterval) clearInterval(adapter.pollInterval);
+            if (adapter.slowPollInterval) clearInterval(adapter.slowPollInterval);
+            if (adapter.fastPollInterval) clearInterval(adapter.fastPollInterval);
             adapter.pollInterval = null;
             adapter.slowPollInterval = null;
+            adapter.fastPollInterval = null;
             adapter.pendingRequests.clear();
         });
 

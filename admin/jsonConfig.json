@@ -27,6 +27,15 @@
       "help": "pollInterval_help"
     },
     {
+      "type": "number",
+      "name": "fastPollInterval",
+      "label": "Fast poll interval (ms) - power values",
+      "min": 500,
+      "max": 10000,
+      "default": 1000,
+      "help": "fastPollInterval_help"
+    },
+    {
       "type": "checkbox",
       "name": "autoDiscovery",
       "label": "Auto discover devices",
