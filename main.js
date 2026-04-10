@@ -31,9 +31,7 @@ class MarstekVenusAdapter extends utils.Adapter {
         
         await this.initStates();
 
-        await this.setStateAsync('control.mode', { val: 'Auto', ack: true });
-        await this.setStateAsync('control.passivePower', { val: 0, ack: true });
-        await this.setStateAsync('control.passiveDuration', { val: 300, ack: true });
+
 
         this.socket = dgram.createSocket('udp4');
         

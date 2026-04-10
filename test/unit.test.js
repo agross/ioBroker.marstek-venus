@@ -159,10 +159,7 @@ describe('MarstekVenusAdapter', function() {
                 expect(adapter.slowPollInterval).to.not.be.null;
             });
 
-            it('sets default control states', async () => {
-                await adapter.onReady();
-                expect(adapter.setStateAsync.calledWith('control.mode', { val: 'Auto', ack: true })).to.be.true;
-            });
+
         });
 
         describe('onUnload()', () => {
