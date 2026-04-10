@@ -5,7 +5,12 @@ The ioBroker.marstek-venus adapter provides full integration with Marstek Venus 
 ## Key Features
 
 - ✅ **Full device auto-discovery** on local network
-- ✅ **Real-time 1 second polling** for all values
+- ✅ **3-tier polling system** for optimized updates:
+  - **Fast poll** (default 1s): Power values (pv, grid, battery, load)
+  - **Normal poll** (default 10s): All status values
+  - **Slow poll** (10min): Device info and network status
+- ✅ **Request deduplication** - prevents overlapping requests
+- ✅ **Automatic retry** - 3 retries with 20s timeout per request
 - ✅ **Complete state coverage** (battery, power, energy, network, device info)
 - ✅ **Full control support** (Auto/AI/Manual/Passive modes)
 - ✅ **Manual mode configuration** (time slots, weekdays, power, enable/disable)
@@ -30,7 +35,8 @@ The ioBroker.marstek-venus adapter provides full integration with Marstek Venus 
 |-----------|-------------|---------|
 | **ipAddress** | Leave empty for auto-discovery, or enter device IP | (empty) |
 | **udpPort** | UDP port for communication | 30000 |
-| **pollInterval** | How often to query device (ms) | 1000 |
+| **pollInterval** | Normal poll interval for all status values (ms) | 10000 |
+| **fastPollInterval** | Fast poll interval for power values (ms) | 1000 |
 | **autoDiscovery** | Enable automatic device discovery | true |
 
 ## States Documentation
@@ -137,9 +143,10 @@ The adapter implements 100% of the official Marstek Open API Revision 1.0:
 - Check WiFi signal strength (network.rssi)
 
 ### Polling Issues
-- Adjust `pollInterval` if device becomes unresponsive
-- Default 1000ms provides 1-second updates but may be too frequent for some networks
-- Check for UDP packet loss
+- Adjust `fastPollInterval` for power value update frequency (default 1000ms)
+- Adjust `pollInterval` for normal status update frequency (default 10000ms)
+- If device becomes unresponsive, increase intervals to reduce network load
+- Slow poll runs every 10 minutes for device info and network status
 
 ### State Updates Not Working
 - Verify control states are writable (some are read-only)
@@ -147,6 +154,12 @@ The adapter implements 100% of the official Marstek Open API Revision 1.0:
 - Ensure manual mode settings are valid
 
 ## Changelog
+
+### 0.1.1
+- Added 3-tier polling system (fast/normal/slow)
+- Added request deduplication to prevent overlapping requests
+- Added automatic retry (3 attempts with 20s timeout per request)
+- Optimized power value updates with dedicated fast poll
 
 ### 0.1.0
 - Initial release
