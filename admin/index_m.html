@@ -70,8 +70,8 @@
         window.addEventListener('message', (event) => {
             const msg = event.data;
 
-            if (msg && msg.command === 'sendTo' && msg.data && msg.data.command === 'getSettings') {
-                const saved = msg.data.values || {};
+            if (msg && msg.command === 'getSettings') {
+                const saved = msg.values || {};
                 document.getElementById('autoDiscovery').checked = saved.autoDiscovery ?? true;
                 document.getElementById('ipAddress').value = saved.ipAddress || '';
                 document.getElementById('udpPort').value = saved.udpPort || '30000';
@@ -79,8 +79,8 @@
                 return;
             }
 
-            if (msg && msg.command === 'sendTo' && msg.data && msg.data.command === 'setSettings') {
-                if (msg.data.success) {
+            if (msg && msg.command === 'setSettings') {
+                if (msg.success) {
                     showMessage('Settings saved to adapter.', 'success');
                 } else {
                     showMessage('Failed to save settings.', 'error');
@@ -88,21 +88,19 @@
                 return;
             }
 
-            if (msg && msg.command === 'sendTo' && msg.data) {
-                console.log('Response from adapter:', msg.data);
-                
-                // Handle discover command response
-                if (msg.data.command === 'discover' && msg.data.success) {
-                    if (msg.data.ipAddress) {
-                        document.getElementById('ipAddress').value = msg.data.ipAddress;
-                        showMessage(`Device discovered successfully at ${msg.data.ipAddress}`, 'success');
-                    } else if (msg.data.devices && msg.data.devices.length > 0) {
-                        // Use first discovered device
-                        const firstDevice = msg.data.devices[0];
+            if (msg && msg.command === 'discover') {
+                console.log('Response from adapter:', msg);
+
+                if (msg.success) {
+                    if (msg.ipAddress) {
+                        document.getElementById('ipAddress').value = msg.ipAddress;
+                        showMessage(`Device discovered successfully at ${msg.ipAddress}`, 'success');
+                    } else if (msg.devices && msg.devices.length > 0) {
+                        const firstDevice = msg.devices[0];
                         if (firstDevice.ipAddress) {
                             document.getElementById('ipAddress').value = firstDevice.ipAddress;
                         }
-                        showMessage(`Found ${msg.data.devices.length} device(s) on network`, 'success');
+                        showMessage(`Found ${msg.devices.length} device(s) on network`, 'success');
                     }
                 }
             }

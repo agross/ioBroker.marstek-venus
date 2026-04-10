@@ -106,9 +106,8 @@
             const msg = event.data;
             const status = document.getElementById('uiStatus');
 
-            if (msg && msg.command === 'sendTo' && msg.data && (msg.data.command === 'getSettings' || msg.data.command === 'returnStatus')) {
-                const data = msg.data;
-                const saved = (data.command === 'getSettings' ? data.values : data) || {};
+            if (msg && msg.command === 'getSettings') {
+                const saved = msg.values || {};
                 document.getElementById('autoDiscovery').checked = saved.autoDiscovery ?? true;
                 document.getElementById('ipAddress').value = saved.ipAddress || '';
                 document.getElementById('udpPort').value = saved.udpPort || '30000';
@@ -116,9 +115,9 @@
                 return;
             }
 
-            if (msg && msg.command === 'sendTo' && msg.data && msg.data.command === 'setSettings') {
+            if (msg && msg.command === 'setSettings') {
                 const status = document.getElementById('uiStatus');
-                if (msg.data.success) {
+                if (msg.success) {
                     status.textContent = 'Settings saved to adapter.';
                     status.style.color = 'green';
                 } else {
@@ -129,16 +128,35 @@
                 return;
             }
 
-            if (msg && msg.command === 'returnStatus') {
-                // Clear timeout when any response is received
+            if (msg && msg.command === 'discover') {
                 if (discoveryTimeout) {
                     clearTimeout(discoveryTimeout);
                     discoveryTimeout = null;
                 }
-                
+
+                if (msg.success) {
+                    if (msg.ipAddress) {
+                        document.getElementById('ipAddress').value = msg.ipAddress;
+                        status.textContent = `Device found at ${msg.ipAddress}, IP address populated.`;
+                        status.style.color = 'green';
+                    } else {
+                        status.textContent = 'Discovery successful. No device found.';
+                        status.style.color = 'blue';
+                    }
+                } else {
+                    status.textContent = 'Discovery failed';
+                    status.style.color = 'red';
+                }
+            }
+
+            if (msg && msg.command === 'returnStatus') {
+                if (discoveryTimeout) {
+                    clearTimeout(discoveryTimeout);
+                    discoveryTimeout = null;
+                }
+
                 if (msg.status === 'ok') {
                     if (msg.ipAddress) {
-                        // Populate IP address field
                         document.getElementById('ipAddress').value = msg.ipAddress;
                         status.textContent = `Device found at ${msg.ipAddress}, IP address populated.`;
                         status.style.color = 'green';
