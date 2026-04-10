@@ -168,6 +168,13 @@ describe('MarstekVenusAdapter', function() {
                 expect(adapter.slowPollInterval).to.not.be.null;
             });
 
+            it('logs socket error when error event occurs (line 40)', async () => {
+                await adapter.onReady();
+                const errorHandler = mockSocket.on.getCall(0).args[1];
+                const error = new Error('Test socket error');
+                errorHandler(error);
+                expect(adapter.log.error.calledWith(`UDP socket error: ${error.message}`)).to.be.true;
+            });
 
         });
 
@@ -202,6 +209,29 @@ describe('MarstekVenusAdapter', function() {
 
                 expect(adapter.discoverDevices.called).to.be.true;
                 expect(adapter.sendTo.called).to.be.true;
+            });
+
+            it('handles setSettings command (lines 209-215)', async () => {
+                adapter.config.autoDiscovery = false;
+                adapter.config.ipAddress = '192.168.1.50';
+                adapter.config.udpPort = 30000;
+                adapter.config.pollInterval = 10000;
+
+                await adapter.onMessage({
+                    command: 'setSettings',
+                    values: {
+                        autoDiscovery: true,
+                        ipAddress: '192.168.1.100',
+                        udpPort: 30001,
+                        pollInterval: 5000
+                    }
+                });
+
+                expect(adapter.config.autoDiscovery).to.be.true;
+                expect(adapter.config.ipAddress).to.equal('192.168.1.100');
+                expect(adapter.config.udpPort).to.equal(30001);
+                expect(adapter.config.pollInterval).to.equal(5000);
+                expect(adapter.log.info.calledWith('Settings updated via UI')).to.be.true;
             });
         });
     });
@@ -261,6 +291,24 @@ describe('MarstekVenusAdapter', function() {
                 expect(e.message).to.include('1 attempts');
             }
             expect(adapter.pendingRequests.size).to.equal(0);
+        });
+
+        it('retries request on timeout (lines 99-100)', async () => {
+            adapter._requestQueue._shuttingDown = false;
+            adapter._requestQueue.queue = [];
+            adapter._requestQueue._busy = false;
+            adapter.config.maxRetries = 3;
+            mockSocket.send.resetHistory();
+            const promise = adapter.sendRequest('ES.GetStatus');
+            clock.tick(1);
+            clock.tick(5000);
+            expect(mockSocket.send.callCount).to.equal(2);
+            clock.tick(5000);
+            clock.tick(5000);
+            try {
+                await promise;
+            } catch (e) {
+            }
         });
 
         it('handles socket send errors', async () => {
@@ -410,6 +458,17 @@ describe('MarstekVenusAdapter', function() {
             }))).to.be.true;
         });
 
+        it('handles Passive mode with null power/duration (lines 23-24)', async () => {
+            adapter.getStateAsync.withArgs('control.passivePower').resolves(null);
+            adapter.getStateAsync.withArgs('control.passiveDuration').resolves(null);
+
+            await adapter.onStateChange('control.mode', { val: 'Passive', ack: false });
+            
+            expect(adapter.sendRequest.calledWith('ES.SetMode', sinon.match({
+                config: { mode: 'Passive', passive_cfg: { power: 0, cd_time: 300 } }
+            }))).to.be.true;
+        });
+
         it('handles Manual mode', async () => {
             adapter.getStateAsync.withArgs('control.manualTimeNum').resolves({ val: 1 });
             adapter.getStateAsync.withArgs('control.manualStartTime').resolves({ val: '08:00' });
@@ -421,6 +480,31 @@ describe('MarstekVenusAdapter', function() {
             await adapter.onStateChange('control.mode', { val: 'Manual', ack: false });
             
             expect(adapter.sendRequest.calledWith('ES.SetMode', sinon.match.has('config'))).to.be.true;
+        });
+
+        it('handles Manual mode with null values (lines 34-39)', async () => {
+            adapter.getStateAsync.withArgs('control.manualTimeNum').resolves(null);
+            adapter.getStateAsync.withArgs('control.manualStartTime').resolves(null);
+            adapter.getStateAsync.withArgs('control.manualEndTime').resolves(null);
+            adapter.getStateAsync.withArgs('control.manualWeekdays').resolves(null);
+            adapter.getStateAsync.withArgs('control.manualPower').resolves(null);
+            adapter.getStateAsync.withArgs('control.manualEnable').resolves(null);
+
+            await adapter.onStateChange('control.mode', { val: 'Manual', ack: false });
+            
+            expect(adapter.sendRequest.calledWith('ES.SetMode', sinon.match({
+                config: sinon.match({
+                    mode: 'Manual',
+                    manual_cfg: sinon.match({
+                        time_num: 0,
+                        start_time: '00:00',
+                        end_time: '23:59',
+                        week_set: 127,
+                        power: 100,
+                        enable: 0
+                    })
+                })
+            }))).to.be.true;
         });
     });
 
