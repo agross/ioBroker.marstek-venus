@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "marstek-venus",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "titleLang": {
       "en": "Marstek Venus Energy Storage",
       "de": "Marstek Venus Energiespeicher",
@@ -29,6 +29,19 @@
       "zh-cn": "Marstek Venus C/D/E 储能设备适配器"
     },
     "news": {
+      "0.1.6": {
+        "en": "Removed invalid ES.GetInfo call which was causing Method not found errors\nDevice information is now obtained exclusively during discovery",
+        "de": "Ungültiger ES.GetInfo-Aufruf entfernt, der Method not found-Fehler verursachte\nGeräteinformationen werden jetzt ausschließlich während der Erkennung abgerufen",
+        "ru": "Удален неверный вызов ES.GetInfo, вызывавший ошибки Method not found\nИнформация об устройстве теперь получается исключительно во время обнаружения",
+        "pt": "Removida chamada ES.GetInfo inválida que estava causando erros Method not found\nInformações do dispositivo agora são obtidas exclusivamente durante a descoberta",
+        "nl": "Ongeldige ES.GetInfo-aanroep verwijderd die Method not found-fouten veroorzaakte\nApparaatinformatie wordt nu uitsluitend verkregen tijdens detectie",
+        "fr": "Supprimé l'appel ES.GetInfo invalide qui causait des erreurs Method not found\nLes informations sur l'appareil sont désormais obtenues exclusivement lors de la découverte",
+        "it": "Rimosso chiamata ES.GetInfo non valida che causava errori Method not found\nLe informazioni sul dispositivo vengono ora ottenute esclusivamente durante la scoperta",
+        "es": "Eliminada llamada ES.GetInfo no válida que causaba errores Method not found\nLa información del dispositivo ahora se obtiene exclusivamente durante el descubrimiento",
+        "pl": "Usunięto nieprawidłowe wywołanie ES.GetInfo, które powodowało błędy Method not found\nInformacje o urządzeniu są teraz uzyskiwane wyłącznie podczas odnajdywania",
+        "uk": "Видалено невірний виклик ES.GetInfo, який спричиняв помилки Method not found\nІнформація про пристрій тепер отримується виключно під час виявлення",
+        "zh-cn": "移除了导致 Method not found 错误的无效 ES.GetInfo 调用\n设备信息现在仅在发现期间获取"
+      },
       "0.1.4": {
         "en": "Fixed repository validation issues, updated adapter naming conventions",
         "de": "Repository-Validierungsprobleme behoben, Adapter-Namenskonventionen aktualisiert",
@@ -81,7 +94,9 @@
       "inverter",
       "pv"
     ],
-    "adminUI": {"config": "json"},
+    "adminUI": {
+      "config": "json"
+    },
     "supportedMessages": {}
   },
   "native": {
