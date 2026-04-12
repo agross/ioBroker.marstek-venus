@@ -1,25 +1,25 @@
-'use strict';
+"use strict";
 
-const chai = require('chai');
-const sinon = require('sinon');
-const dgram = require('node:dgram');
+const chai = require("chai");
+const sinon = require("sinon");
+const dgram = require("node:dgram");
 const expect = chai.expect;
 
 // Mock external dependencies FIRST
 const mockSocket = {
     on: sinon.stub(),
-    bind: sinon.stub().callsFake((port, cb) => typeof cb === 'function' && cb(null)),
+    bind: sinon.stub().callsFake((port, cb) => typeof cb === "function" && cb(null)),
     setBroadcast: sinon.stub(),
-    address: sinon.stub().returns({ address: '0.0.0.0', port: 12345 }),
+    address: sinon.stub().returns({address: "0.0.0.0", port: 12345}),
     send: sinon.stub().callsFake((buf, offset, len, port, addr, cb) => {
-        if (typeof cb === 'function') {
+        if (typeof cb === "function") {
             cb(null);
         }
         return null;
     }),
-    close: sinon.stub()
+    close: sinon.stub(),
 };
-sinon.stub(dgram, 'createSocket').returns(mockSocket);
+sinon.stub(dgram, "createSocket").returns(mockSocket);
 
 // Mock the adapter core base class
 class MockAdapterBase {
@@ -30,7 +30,7 @@ class MockAdapterBase {
             info: sinon.stub(),
             debug: sinon.stub(),
             warn: sinon.stub(),
-            error: sinon.stub()
+            error: sinon.stub(),
         };
         this.setStateAsync = sinon.stub().resolves();
         this.setStateChangedAsync = sinon.stub().resolves();
@@ -83,23 +83,23 @@ class MockAdapterBase {
 
 // Mock @iobroker/adapter-core
 const mockAdapterCore = {
-    Adapter: MockAdapterBase
+    Adapter: MockAdapterBase,
 };
-require.cache[require.resolve('@iobroker/adapter-core')] = { exports: mockAdapterCore };
+require.cache[require.resolve("@iobroker/adapter-core")] = {exports: mockAdapterCore};
 
 // Now load the actual adapter - clear ALL caches including adapter-core
-const adapterCorePath = require.resolve('@iobroker/adapter-core');
+const adapterCorePath = require.resolve("@iobroker/adapter-core");
 Object.keys(require.cache).forEach(key => {
-    if (key === adapterCorePath || key.includes('/lib/') || key.endsWith('main.js')) {
+    if (key === adapterCorePath || key.includes("/lib/") || key.endsWith("main.js")) {
         delete require.cache[key];
     }
 });
 // Re-mock adapter-core
 require.cache[adapterCorePath] = { exports: mockAdapterCore };
-const MarstekVenusAdapter = require('../main.js');
-const Adapter = (options) => new MarstekVenusAdapter(options);
+const MarstekVenusAdapter = require("../main.js");
+const Adapter = options => new MarstekVenusAdapter(options);
 
-describe('MarstekVenusAdapter', function() {
+describe("MarstekVenusAdapter", function () {
     let adapter;
     let sandbox;
     let clock;
@@ -109,12 +109,12 @@ describe('MarstekVenusAdapter', function() {
     beforeEach(() => {
         sandbox = sinon.createSandbox();
         clock = sandbox.useFakeTimers();
-        
+
         // Reset socket mock completely
         mockSocket.on.resetHistory();
         mockSocket.bind.reset();
         mockSocket.bind.callsFake((port, cb) => {
-            if (typeof cb === 'function') {
+            if (typeof cb === "function") {
                 cb(null);
             }
         });
@@ -122,7 +122,7 @@ describe('MarstekVenusAdapter', function() {
         mockSocket.address.resetHistory();
         mockSocket.send.reset();
         mockSocket.send.callsFake((buf, offset, len, port, addr, cb) => {
-            if (typeof cb === 'function') {
+            if (typeof cb === "function") {
                 cb(null);
             }
             return null;
@@ -133,10 +133,10 @@ describe('MarstekVenusAdapter', function() {
         adapter = Adapter({
             config: {
                 autoDiscovery: false,
-                ipAddress: '192.168.1.100',
+                ipAddress: "192.168.1.100",
                 udpPort: 30000,
-                pollInterval: 10000
-            }
+                pollInterval: 10000,
+            },
         });
 
         // Clear pending requests and intervals from any accidental polls triggered during setup
@@ -157,7 +157,8 @@ describe('MarstekVenusAdapter', function() {
         if (adapter._requestQueue && adapter._requestQueue.clear) {
             try {
                 adapter._requestQueue.clear();
-            } catch (e) {
+            } catch {
+                // Ignore clear errors during cleanup
             }
         }
         adapter._pollingInProgress = false;
@@ -170,8 +171,8 @@ describe('MarstekVenusAdapter', function() {
         adapter = null;
     });
 
-    describe('Constructor', () => {
-        it('initializes all properties correctly', () => {
+    describe("Constructor", () => {
+        it("initializes all properties correctly", () => {
             expect(adapter._requestId).to.equal(1);
             expect(adapter._pendingRequests).to.be.instanceOf(Map);
             expect(adapter._normalPollTimer).to.be.null;
@@ -182,7 +183,7 @@ describe('MarstekVenusAdapter', function() {
             expect(adapter._pollFailureCount).to.equal(0);
         });
 
-        it('binds all lifecycle event handlers', () => {
+        it("binds all lifecycle event handlers", () => {
             expect(adapter._eventHandlers.ready).to.exist;
             expect(adapter._eventHandlers.stateChange).to.exist;
             expect(adapter._eventHandlers.unload).to.exist;
@@ -190,43 +191,43 @@ describe('MarstekVenusAdapter', function() {
         });
     });
 
-    describe('Lifecycle methods', () => {
-        describe('onReady()', () => {
-            it('initializes states and creates socket', async () => {
+    describe("Lifecycle methods", () => {
+        describe("onReady()", () => {
+            it("initializes states and creates socket", async () => {
                 await adapter.onReady();
 
                 expect(adapter.setObjectNotExistsAsync.callCount).to.equal(45);
-                expect(adapter.subscribeStatesAsync.calledWith('control.*')).to.be.true;
-                expect(dgram.createSocket.calledWith('udp4')).to.be.true;
+                expect(adapter.subscribeStatesAsync.calledWith("control.*")).to.be.true;
+                expect(dgram.createSocket.calledWith("udp4")).to.be.true;
                 expect(mockSocket.bind.called).to.be.true;
                 expect(mockSocket.setBroadcast.calledWith(true)).to.be.true;
             });
 
-            it('starts polling when IP is configured', async () => {
+            it("starts polling when IP is configured", async () => {
                 await adapter.onReady();
                 expect(adapter._normalPollTimer).to.not.be.null;
                 expect(adapter._slowPollTimer).to.not.be.null;
             });
 
-            it('logs socket error when error event occurs (line 40)', async () => {
+            it("logs socket error when error event occurs (line 40)", async () => {
                 await adapter.onReady();
                 const errorHandler = mockSocket.on.getCall(0).args[1];
-                const error = new Error('Test socket error');
+                const error = new Error("Test socket error");
                 errorHandler(error);
                 expect(adapter.log.error.calledWith(`UDP socket error: ${error.message}`)).to.be.true;
             });
-
         });
 
-        describe('onUnload()', () => {
-            it('cleans up all resources', (done) => {
+        describe("onUnload()", () => {
+            it("cleans up all resources", done => {
                 adapter._socket = mockSocket;
                 adapter._normalPollTimer = setInterval(() => {
                 }, 1000);
                 adapter._slowPollTimer = setInterval(() => {
                 }, 1000);
-                
-                const timeout = setTimeout(() => {}, 1000);
+
+                const timeout = setTimeout(() => {
+                }, 1000);
                 const rejectSpy = sandbox.stub();
                 adapter._pendingRequests.set(1, {timeout, reject: rejectSpy});
 
@@ -238,52 +239,58 @@ describe('MarstekVenusAdapter', function() {
             });
         });
 
-        describe('onMessage()', () => {
-            it('handles discover command', async () => {
+        describe("onMessage()", () => {
+            it("handles discover command", async () => {
                 adapter.discoverDevices = sandbox.stub().resolves();
-                adapter._discoveredIP = '192.168.1.100';
+                adapter._discoveredIP = "192.168.1.100";
 
                 await adapter.onMessage({
-                    command: 'discover',
-                    from: 'admin.0',
-                    callback: 123
+                    command: "discover",
+                    from: "admin.0",
+                    callback: 123,
                 });
 
                 expect(adapter.discoverDevices.called).to.be.true;
                 expect(adapter.sendTo.called).to.be.true;
             });
 
-            it('handles setSettings command (lines 209-215)', async () => {
+            it("handles setSettings command (lines 209-215)", async () => {
                 adapter.config.autoDiscovery = false;
-                adapter.config.ipAddress = '192.168.1.50';
+                adapter.config.ipAddress = "192.168.1.50";
                 adapter.config.udpPort = 30000;
                 adapter.config.pollInterval = 10000;
 
                 await adapter.onMessage({
-                    command: 'setSettings',
+                    command: "setSettings",
                     values: {
                         autoDiscovery: true,
-                        ipAddress: '192.168.1.100',
+                        ipAddress: "192.168.1.100",
                         udpPort: 30001,
-                        pollInterval: 5000
-                    }
+                        pollInterval: 5000,
+                    },
                 });
 
                 expect(adapter.config.autoDiscovery).to.be.true;
-                expect(adapter.config.ipAddress).to.equal('192.168.1.100');
+                expect(adapter.config.ipAddress).to.equal("192.168.1.100");
                 expect(adapter.config.udpPort).to.equal(30001);
                 expect(adapter.config.pollInterval).to.equal(5000);
-                expect(adapter.log.info.calledWith('Settings saved and persisted')).to.be.true;
+                expect(adapter.log.info.calledWith("Settings saved and persisted")).to.be.true;
             });
         });
     });
 
-    describe('sendRequest()', () => {
+    describe("sendRequest()", () => {
         beforeEach(async () => {
             await adapter.onReady();
-            if (adapter._normalPollTimer) clearInterval(adapter._normalPollTimer);
-            if (adapter._slowPollTimer) clearInterval(adapter._slowPollTimer);
-            if (adapter.fastPollInterval) clearInterval(adapter.fastPollInterval);
+            if (adapter._normalPollTimer) {
+                clearInterval(adapter._normalPollTimer);
+            }
+            if (adapter._slowPollTimer) {
+                clearInterval(adapter._slowPollTimer);
+            }
+            if (adapter.fastPollInterval) {
+                clearInterval(adapter.fastPollInterval);
+            }
             adapter._normalPollTimer = null;
             adapter._slowPollTimer = null;
             adapter.fastPollInterval = null;
@@ -291,57 +298,57 @@ describe('MarstekVenusAdapter', function() {
             adapter._pendingRequestsByMethod = new Map();
         });
 
-        it('rejects when no target IP', async () => {
-            adapter.config.ipAddress = '';
+        it("rejects when no target IP", async () => {
+            adapter.config.ipAddress = "";
             adapter._discoveredIP = null;
 
             try {
-                await adapter.sendRequest('ES.GetStatus');
-                expect.fail('Should reject');
+                await adapter.sendRequest("ES.GetStatus");
+                expect.fail("Should reject");
             } catch (e) {
-                expect(e.message).to.equal('No target IP configured');
+                expect(e.message).to.equal("No target IP configured");
             }
         });
 
-        it('adds request to pending queue', async () => {
+        it("adds request to pending queue", async () => {
             adapter._requestQueue._shuttingDown = false;
             adapter._requestQueue.queue = [];
             adapter._requestQueue._busy = false;
-            const promise = adapter.sendRequest('ES.GetStatus');
+            const promise = adapter.sendRequest("ES.GetStatus");
             clock.tick(1);
             expect(adapter._pendingRequests.size).to.equal(1);
 
             const req = adapter._pendingRequests.values().next().value;
             clearTimeout(req.timeout);
-            req.resolve({ ok: true });
-            
-            expect(await promise).to.deep.equal({ ok: true });
+            req.resolve({ok: true});
+
+            expect(await promise).to.deep.equal({ok: true});
         });
 
-        it('handles timeout correctly', async () => {
+        it("handles timeout correctly", async () => {
             adapter._requestQueue._shuttingDown = false;
             adapter._requestQueue.queue = [];
             adapter._requestQueue._busy = false;
-            const promise = adapter.sendRequest('ES.GetStatus');
+            const promise = adapter.sendRequest("ES.GetStatus");
             clock.tick(1);
             clock.tick(10000);
-            
+
             try {
                 await promise;
-                expect.fail('Should timeout');
+                expect.fail("Should timeout");
             } catch (e) {
-                expect(e.message).to.include('1 attempts');
+                expect(e.message).to.include("1 attempts");
             }
         });
 
-        it('retries request on timeout (lines 99-100)', async () => {
+        it("retries request on timeout (lines 99-100)", async () => {
             adapter._requestQueue._shuttingDown = false;
             adapter._requestQueue.queue = [];
             adapter._requestQueue._busy = false;
             adapter.config.maxRetries = 3;
             adapter.config.requestTimeout = 5000;
             mockSocket.send.resetHistory();
-            const promise = adapter.sendRequest('ES.GetStatus');
+            const promise = adapter.sendRequest("ES.GetStatus");
             clock.tick(1);
             clock.tick(5000);
             expect(mockSocket.send.callCount).to.equal(2);
@@ -349,32 +356,39 @@ describe('MarstekVenusAdapter', function() {
             clock.tick(5000);
             try {
                 await promise;
-            } catch (e) {
+            } catch {
+                // Expected to timeout
             }
         });
 
-        it('handles socket send errors', async () => {
+        it("handles socket send errors", async () => {
             adapter._requestQueue._shuttingDown = false;
             adapter._requestQueue.queue = [];
             adapter._requestQueue._busy = false;
-            mockSocket.send.callsArgWith(5, new Error('Send failed'));
+            mockSocket.send.callsArgWith(5, new Error("Send failed"));
             clock.tick(1);
-            
+
             try {
-                await adapter.sendRequest('ES.GetStatus');
-                expect.fail('Should reject');
+                await adapter.sendRequest("ES.GetStatus");
+                expect.fail("Should reject");
             } catch (e) {
-                expect(e.message).to.equal('Send failed');
+                expect(e.message).to.equal("Send failed");
             }
         });
     });
 
-    describe('handleResponse()', () => {
+    describe("handleResponse()", () => {
         beforeEach(async () => {
             await adapter.onReady();
-            if (adapter._normalPollTimer) clearInterval(adapter._normalPollTimer);
-            if (adapter._slowPollTimer) clearInterval(adapter._slowPollTimer);
-            if (adapter.fastPollInterval) clearInterval(adapter.fastPollInterval);
+            if (adapter._normalPollTimer) {
+                clearInterval(adapter._normalPollTimer);
+            }
+            if (adapter._slowPollTimer) {
+                clearInterval(adapter._slowPollTimer);
+            }
+            if (adapter.fastPollInterval) {
+                clearInterval(adapter.fastPollInterval);
+            }
             adapter._normalPollTimer = null;
             adapter._slowPollTimer = null;
             adapter.fastPollInterval = null;
@@ -382,184 +396,205 @@ describe('MarstekVenusAdapter', function() {
             adapter._pendingRequestsByMethod = new Map();
         });
 
-        it('resolves pending request on success', async () => {
+        it("resolves pending request on success", async () => {
             adapter._requestQueue._shuttingDown = false;
             adapter._requestQueue.queue = [];
             adapter._requestQueue._busy = false;
-            const promise = adapter.sendRequest('ES.GetStatus');
+            const promise = adapter.sendRequest("ES.GetStatus");
             clock.tick(1);
             const reqId = adapter._requestId - 1;
 
-            adapter.handleResponse(
-                Buffer.from(JSON.stringify({ id: reqId, result: { soc: 98 } })),
-                { address: '192.168.1.100' }
-            );
+            adapter.handleResponse(Buffer.from(JSON.stringify({id: reqId, result: {soc: 98}})), {
+                address: "192.168.1.100",
+            });
 
-            expect(await promise).to.deep.equal({ soc: 98 });
+            expect(await promise).to.deep.equal({soc: 98});
         });
 
-        it('rejects on error response', async () => {
+        it("rejects on error response", async () => {
             adapter._requestQueue._shuttingDown = false;
             adapter._requestQueue.queue = [];
             adapter._requestQueue._busy = false;
-            const promise = adapter.sendRequest('ES.GetStatus');
+            const promise = adapter.sendRequest("ES.GetStatus");
             clock.tick(1);
             const reqId = adapter._requestId - 1;
 
-            adapter.handleResponse(
-                Buffer.from(JSON.stringify({ id: reqId, error: { code: -1, message: 'Error' } })),
-                { address: '192.168.1.100' }
-            );
+            adapter.handleResponse(Buffer.from(JSON.stringify({id: reqId, error: {code: -1, message: "Error"}})), {
+                address: "192.168.1.100",
+            });
 
             try {
                 await promise;
-                expect.fail('Should reject');
+                expect.fail("Should reject");
             } catch (e) {
-                expect(e.message).to.include('Error');
+                expect(e.message).to.include("Error");
             }
         });
 
-        it('handles discovery responses', () => {
-            adapter.config.ipAddress = '';
-            
+        it("handles discovery responses", () => {
+            adapter.config.ipAddress = "";
+
             adapter.handleResponse(
-                Buffer.from(JSON.stringify({ result: { device: 'Venus C', ip: '192.168.1.100' } })),
-                { address: '192.168.1.100' }
+                Buffer.from(JSON.stringify({result: {device: "Venus C", ip: "192.168.1.100"}})),
+                {address: "192.168.1.100"},
             );
 
             // Wait for discovery handler to complete
             clock.tick(100);
-            expect(adapter._discoveredIP).to.equal('192.168.1.100');
+            expect(adapter._discoveredIP).to.equal("192.168.1.100");
         });
 
-        it('ignores discovery when IP already configured', () => {
-            adapter.config.ipAddress = '192.168.1.50';
+        it("ignores discovery when IP already configured", () => {
+            adapter.config.ipAddress = "192.168.1.50";
             adapter.startPolling = sandbox.stub();
-            
+
             adapter.handleResponse(
-                Buffer.from(JSON.stringify({ result: { device: 'Venus C', ip: '192.168.1.100' } })),
-                { address: '192.168.1.100' }
+                Buffer.from(JSON.stringify({result: {device: "Venus C", ip: "192.168.1.100"}})),
+                {address: "192.168.1.100"},
             );
 
             expect(adapter._discoveredIP).to.be.null;
             expect(adapter.log.info.calledWithMatch(/using configured IP/)).to.be.true;
         });
 
-        it('warns on discovery response without IP', () => {
-            adapter.config.ipAddress = '';
-            
-            adapter.handleResponse(
-                Buffer.from(JSON.stringify({ result: { device: 'Venus C' } })),
-                { address: '192.168.1.100' }
-            );
+        it("warns on discovery response without IP", () => {
+            adapter.config.ipAddress = "";
+
+            adapter.handleResponse(Buffer.from(JSON.stringify({result: {device: "Venus C"}})), {
+                address: "192.168.1.100",
+            });
 
             expect(adapter.log.warn.calledWithMatch(/without IP address/)).to.be.true;
         });
 
-        it('ignores unsolicited messages', () => {
-            adapter.handleResponse(
-                Buffer.from(JSON.stringify({ method: 'SomeEvent', data: 123 })),
-                { address: '192.168.1.100' }
-            );
+        it("ignores unsolicited messages", () => {
+            adapter.handleResponse(Buffer.from(JSON.stringify({method: "SomeEvent", data: 123})), {
+                address: "192.168.1.100",
+            });
 
             expect(adapter.log.debug.calledWithMatch(/unsolicited message/)).to.be.true;
         });
 
-        it('ignores invalid JSON', () => {
-            adapter.handleResponse(Buffer.from('invalid json'), { address: '192.168.1.100' });
+        it("ignores invalid JSON", () => {
+            adapter.handleResponse(Buffer.from("invalid json"), {address: "192.168.1.100"});
             expect(adapter.log.debug.calledWithMatch(/Invalid response/)).to.be.true;
         });
     });
 
-    describe('Operating modes', () => {
+    describe("Operating modes", () => {
         beforeEach(async () => {
             await adapter.onReady();
             adapter.sendRequest = sandbox.stub().resolves();
         });
 
-        it('handles Auto mode', async () => {
-            await adapter.onStateChange('control.mode', { val: 'Auto', ack: false });
-            expect(adapter.sendRequest.calledWith('ES.SetMode', sinon.match({
-                config: { mode: 'Auto', auto_cfg: { enable: 1 } }
-            }))).to.be.true;
+        it("handles Auto mode", async () => {
+            await adapter.onStateChange("control.mode", {val: "Auto", ack: false});
+            expect(
+                adapter.sendRequest.calledWith(
+                    "ES.SetMode",
+                    sinon.match({
+                        config: {mode: "Auto", auto_cfg: {enable: 1}},
+                    }),
+                ),
+            ).to.be.true;
         });
 
-        it('handles AI mode', async () => {
-            await adapter.onStateChange('control.mode', { val: 'AI', ack: false });
-            expect(adapter.sendRequest.calledWith('ES.SetMode', sinon.match({
-                config: { mode: 'AI', ai_cfg: { enable: 1 } }
-            }))).to.be.true;
+        it("handles AI mode", async () => {
+            await adapter.onStateChange("control.mode", {val: "AI", ack: false});
+            expect(
+                adapter.sendRequest.calledWith(
+                    "ES.SetMode",
+                    sinon.match({
+                        config: {mode: "AI", ai_cfg: {enable: 1}},
+                    }),
+                ),
+            ).to.be.true;
         });
 
-        it('handles Passive mode', async () => {
-            adapter.getStateAsync.withArgs('control.passivePower').resolves({ val: 500 });
-            adapter.getStateAsync.withArgs('control.passiveDuration').resolves({ val: 600 });
+        it("handles Passive mode", async () => {
+            adapter.getStateAsync.withArgs("control.passivePower").resolves({val: 500});
+            adapter.getStateAsync.withArgs("control.passiveDuration").resolves({val: 600});
 
-            await adapter.onStateChange('control.mode', { val: 'Passive', ack: false });
-            
-            expect(adapter.sendRequest.calledWith('ES.SetMode', sinon.match({
-                config: { mode: 'Passive', passive_cfg: { power: 500, cd_time: 600 } }
-            }))).to.be.true;
+            await adapter.onStateChange("control.mode", {val: "Passive", ack: false});
+
+            expect(
+                adapter.sendRequest.calledWith(
+                    "ES.SetMode",
+                    sinon.match({
+                        config: {mode: "Passive", passive_cfg: {power: 500, cd_time: 600}},
+                    }),
+                ),
+            ).to.be.true;
         });
 
-        it('handles Passive mode with null power/duration (lines 23-24)', async () => {
-            adapter.getStateAsync.withArgs('control.passivePower').resolves(null);
-            adapter.getStateAsync.withArgs('control.passiveDuration').resolves(null);
+        it("handles Passive mode with null power/duration (lines 23-24)", async () => {
+            adapter.getStateAsync.withArgs("control.passivePower").resolves(null);
+            adapter.getStateAsync.withArgs("control.passiveDuration").resolves(null);
 
-            await adapter.onStateChange('control.mode', { val: 'Passive', ack: false });
-            
-            expect(adapter.sendRequest.calledWith('ES.SetMode', sinon.match({
-                config: { mode: 'Passive', passive_cfg: { power: 0, cd_time: 300 } }
-            }))).to.be.true;
+            await adapter.onStateChange("control.mode", {val: "Passive", ack: false});
+
+            expect(
+                adapter.sendRequest.calledWith(
+                    "ES.SetMode",
+                    sinon.match({
+                        config: {mode: "Passive", passive_cfg: {power: 0, cd_time: 300}},
+                    }),
+                ),
+            ).to.be.true;
         });
 
-        it('handles Manual mode', async () => {
-            adapter.getStateAsync.withArgs('control.manualTimeNum').resolves({ val: 1 });
-            adapter.getStateAsync.withArgs('control.manualStartTime').resolves({ val: '08:00' });
-            adapter.getStateAsync.withArgs('control.manualEndTime').resolves({ val: '20:00' });
-            adapter.getStateAsync.withArgs('control.manualWeekdays').resolves({ val: 127 });
-            adapter.getStateAsync.withArgs('control.manualPower').resolves({ val: 1000 });
-            adapter.getStateAsync.withArgs('control.manualEnable').resolves({ val: true });
+        it("handles Manual mode", async () => {
+            adapter.getStateAsync.withArgs("control.manualTimeNum").resolves({val: 1});
+            adapter.getStateAsync.withArgs("control.manualStartTime").resolves({val: "08:00"});
+            adapter.getStateAsync.withArgs("control.manualEndTime").resolves({val: "20:00"});
+            adapter.getStateAsync.withArgs("control.manualWeekdays").resolves({val: 127});
+            adapter.getStateAsync.withArgs("control.manualPower").resolves({val: 1000});
+            adapter.getStateAsync.withArgs("control.manualEnable").resolves({val: true});
 
-            await adapter.onStateChange('control.mode', { val: 'Manual', ack: false });
-            
-            expect(adapter.sendRequest.calledWith('ES.SetMode', sinon.match.has('config'))).to.be.true;
+            await adapter.onStateChange("control.mode", {val: "Manual", ack: false});
+
+            expect(adapter.sendRequest.calledWith("ES.SetMode", sinon.match.has("config"))).to.be.true;
         });
 
-        it('handles Manual mode with null values (lines 34-39)', async () => {
-            adapter.getStateAsync.withArgs('control.manualTimeNum').resolves(null);
-            adapter.getStateAsync.withArgs('control.manualStartTime').resolves(null);
-            adapter.getStateAsync.withArgs('control.manualEndTime').resolves(null);
-            adapter.getStateAsync.withArgs('control.manualWeekdays').resolves(null);
-            adapter.getStateAsync.withArgs('control.manualPower').resolves(null);
-            adapter.getStateAsync.withArgs('control.manualEnable').resolves(null);
+        it("handles Manual mode with null values (lines 34-39)", async () => {
+            adapter.getStateAsync.withArgs("control.manualTimeNum").resolves(null);
+            adapter.getStateAsync.withArgs("control.manualStartTime").resolves(null);
+            adapter.getStateAsync.withArgs("control.manualEndTime").resolves(null);
+            adapter.getStateAsync.withArgs("control.manualWeekdays").resolves(null);
+            adapter.getStateAsync.withArgs("control.manualPower").resolves(null);
+            adapter.getStateAsync.withArgs("control.manualEnable").resolves(null);
 
-            await adapter.onStateChange('control.mode', { val: 'Manual', ack: false });
-            
-            expect(adapter.sendRequest.calledWith('ES.SetMode', sinon.match({
-                config: sinon.match({
-                    mode: 'Manual',
-                    manual_cfg: sinon.match({
-                        time_num: 0,
-                        start_time: '00:00',
-                        end_time: '23:59',
-                        week_set: 127,
-                        power: 100,
-                        enable: 0
-                    })
-                })
-            }))).to.be.true;
+            await adapter.onStateChange("control.mode", {val: "Manual", ack: false});
+
+            expect(
+                adapter.sendRequest.calledWith(
+                    "ES.SetMode",
+                    sinon.match({
+                        config: sinon.match({
+                            mode: "Manual",
+                            manual_cfg: sinon.match({
+                                time_num: 0,
+                                start_time: "00:00",
+                                end_time: "23:59",
+                                week_set: 127,
+                                power: 100,
+                                enable: 0,
+                            }),
+                        }),
+                    }),
+                ),
+            ).to.be.true;
         });
     });
 
-    describe('Poll functions', () => {
+    describe("Poll functions", () => {
         beforeEach(async () => {
             adapter._normalPollTimer = null;
             adapter._slowPollTimer = null;
             adapter._pollingInProgress = false;
         });
 
-        it('updates connection state on successful poll', async () => {
+        it("updates connection state on successful poll", async () => {
             adapter.pollESStatus = sandbox.stub().resolves();
             adapter.pollBatteryStatus = sandbox.stub().resolves();
             adapter.pollPVStatus = sandbox.stub().resolves();
@@ -567,22 +602,22 @@ describe('MarstekVenusAdapter', function() {
             adapter.pollModeStatus = sandbox.stub().resolves();
 
             await adapter.poll();
-            expect(adapter.setStateAsync.calledWith('info.connection', { val: true, ack: true })).to.be.true;
+            expect(adapter.setStateAsync.calledWith("info.connection", {val: true, ack: true})).to.be.true;
             expect(adapter._pollFailureCount).to.equal(0);
         });
 
-        it('handles poll cycle throw', async () => {
-            sandbox.stub(adapter, 'pollWithRetry').callsFake(async () => {
-                throw new Error('Poll error');
+        it("handles poll cycle throw", async () => {
+            sandbox.stub(adapter, "pollWithRetry").callsFake(async () => {
+                throw new Error("Poll error");
             });
 
             await adapter.poll();
             expect(adapter._pollFailureCount).to.equal(1);
         });
 
-        it('handles poll cycle throw with 3 failures', async () => {
-            sandbox.stub(adapter, 'pollWithRetry').callsFake(async () => {
-                throw new Error('Poll error');
+        it("handles poll cycle throw with 3 failures", async () => {
+            sandbox.stub(adapter, "pollWithRetry").callsFake(async () => {
+                throw new Error("Poll error");
             });
 
             await adapter.poll();
@@ -591,72 +626,70 @@ describe('MarstekVenusAdapter', function() {
             expect(adapter._pollFailureCount).to.equal(2);
             await adapter.poll();
             expect(adapter._pollFailureCount).to.equal(3);
-            expect(adapter.setStateAsync.calledWith('info.connection', { val: false, ack: true })).to.be.true;
+            expect(adapter.setStateAsync.calledWith("info.connection", {val: false, ack: true})).to.be.true;
         });
 
-        it('handles pollWithRetry returning false', async () => {
-            sandbox.stub(adapter, 'pollWithRetry').resolves(false);
+        it("handles pollWithRetry returning false", async () => {
+            sandbox.stub(adapter, "pollWithRetry").resolves(false);
 
             await adapter.poll();
             expect(adapter._pollFailureCount).to.equal(1);
         });
 
-        it('does not mark connection false on single poll failure', async () => {
-            sandbox.stub(adapter, 'pollWithRetry').callsFake(async (fn) => {
+        it("does not mark connection false on single poll failure", async () => {
+            sandbox.stub(adapter, "pollWithRetry").callsFake(async fn => {
                 try {
                     await fn();
                     return true;
-                } catch (e) {
+                } catch {
                     return false;
                 }
             });
 
             await adapter.poll();
-            expect(adapter.setStateAsync.calledWith('info.connection', { val: false, ack: true })).to.be.false;
+            expect(adapter.setStateAsync.calledWith("info.connection", {val: false, ack: true})).to.be.false;
             expect(adapter._pollFailureCount).to.equal(1);
         });
 
-        it('marks connection false after 3 consecutive poll failures', async () => {
-            sandbox.stub(adapter, 'pollWithRetry').callsFake(async (fn) => {
+        it("marks connection false after 3 consecutive poll failures", async () => {
+            sandbox.stub(adapter, "pollWithRetry").callsFake(async fn => {
                 try {
                     await fn();
                     return true;
-                } catch (e) {
+                } catch {
                     return false;
                 }
             });
 
             await adapter.poll();
             expect(adapter._pollFailureCount).to.equal(1);
-            expect(adapter.setStateAsync.calledWith('info.connection', { val: false, ack: true })).to.be.false;
+            expect(adapter.setStateAsync.calledWith("info.connection", {val: false, ack: true})).to.be.false;
 
             await adapter.poll();
             expect(adapter._pollFailureCount).to.equal(2);
-            expect(adapter.setStateAsync.calledWith('info.connection', { val: false, ack: true })).to.be.false;
+            expect(adapter.setStateAsync.calledWith("info.connection", {val: false, ack: true})).to.be.false;
 
             await adapter.poll();
             expect(adapter._pollFailureCount).to.equal(3);
-            expect(adapter.setStateAsync.calledWith('info.connection', { val: false, ack: true })).to.be.true;
+            expect(adapter.setStateAsync.calledWith("info.connection", {val: false, ack: true})).to.be.true;
         });
 
-        it('resets failure count on successful poll after failures', async () => {
-            let pollCallCount = 0;
-            sandbox.stub(adapter, 'pollWithRetry').callsFake(async (fn) => {
-                pollCallCount++;
+        it("resets failure count on successful poll after failures", async () => {
+            sandbox.stub(adapter, "pollWithRetry").callsFake(async fn => {
                 try {
                     await fn();
                     return true;
-                } catch (e) {
+                } catch {
                     return false;
                 }
             });
 
             // First two polls fail (all poll functions fail)
-            adapter.pollESStatus = sandbox.stub().rejects(new Error('Failed'));
-            adapter.pollBatteryStatus = sandbox.stub().rejects(new Error('Failed'));
-            adapter.pollPVStatus = sandbox.stub().rejects(new Error('Failed'));
-            adapter.pollEMStatus = sandbox.stub().rejects(new Error('Failed'));
-            adapter.pollModeStatus = sandbox.stub().rejects(new Error('Failed'));
+            adapter.pollESStatus = sandbox.stub().rejects(new Error("Failed"));
+            adapter.pollBatteryStatus = sandbox.stub().rejects(new Error("Failed"));
+            adapter.pollPVStatus = sandbox.stub().rejects(new Error("Failed"));
+            adapter.pollEMStatus = sandbox.stub().rejects(new Error("Failed"));
+            adapter.pollModeStatus = sandbox.stub().rejects(new Error("Failed"));
 
             await adapter.poll();
             await adapter.poll();
@@ -671,18 +704,18 @@ describe('MarstekVenusAdapter', function() {
 
             await adapter.poll();
             expect(adapter._pollFailureCount).to.equal(0);
-            expect(adapter.setStateAsync.calledWith('info.connection', { val: true, ack: true })).to.be.true;
+            expect(adapter.setStateAsync.calledWith("info.connection", {val: true, ack: true})).to.be.true;
         });
 
-        it('skips overlapping polls', async () => {
+        it("skips overlapping polls", async () => {
             adapter._pollingInProgress = true;
-            
+
             await adapter.poll();
             expect(adapter._pollingInProgress).to.be.true;
         });
 
-        it('retries failed poll before marking failure', async () => {
-            const setTimeoutStub = sandbox.stub(global, 'setTimeout').callsFake((fn) => {
+        it("retries failed poll before marking failure", async () => {
+            sandbox.stub(global, "setTimeout").callsFake(fn => {
                 fn();
                 return 1;
             });
@@ -691,7 +724,7 @@ describe('MarstekVenusAdapter', function() {
             adapter.pollESStatus = sandbox.stub().callsFake(() => {
                 attempts++;
                 if (attempts < 2) {
-                    return Promise.reject(new Error('Transient failure'));
+                    return Promise.reject(new Error("Transient failure"));
                 }
                 return Promise.resolve();
             });
@@ -705,19 +738,19 @@ describe('MarstekVenusAdapter', function() {
             expect(adapter._pollFailureCount).to.equal(0);
         });
 
-        it('returns false when all retry attempts fail', async () => {
-            sandbox.stub(global, 'setTimeout').callsFake((fn) => {
+        it("returns false when all retry attempts fail", async () => {
+            sandbox.stub(global, "setTimeout").callsFake(fn => {
                 fn();
                 return 1;
             });
-            adapter.pollESStatus = sandbox.stub().rejects(new Error('Permanent failure'));
+            adapter.pollESStatus = sandbox.stub().rejects(new Error("Permanent failure"));
 
             const result = await adapter.pollWithRetry(() => adapter.pollESStatus());
             expect(result).to.be.false;
         });
 
-        it('returns true on successful attempt', async () => {
-            sandbox.stub(global, 'setTimeout').callsFake((fn) => {
+        it("returns true on successful attempt", async () => {
+            sandbox.stub(global, "setTimeout").callsFake(fn => {
                 fn();
                 return 1;
             });
@@ -728,12 +761,12 @@ describe('MarstekVenusAdapter', function() {
         });
     });
 
-    describe('All helper methods', () => {
+    describe("All helper methods", () => {
         beforeEach(async () => {
             await adapter.onReady();
         });
 
-        it('pollESStatus updates all power states', async () => {
+        it("pollESStatus updates all power states", async () => {
             adapter.sendRequest = sandbox.stub().resolves({
                 pv_power: 500,
                 ongrid_power: 200,
@@ -743,217 +776,221 @@ describe('MarstekVenusAdapter', function() {
                 total_pv_energy: 1000,
                 total_grid_output_energy: 200,
                 total_grid_input_energy: 150,
-                total_load_energy: 300
+                total_load_energy: 300,
             });
 
             await adapter.pollESStatus();
             expect(adapter.setStateChangedAsync.callCount).to.equal(9);
         });
 
-        it('pollESStatus handles partial response', async () => {
+        it("pollESStatus handles partial response", async () => {
             adapter.sendRequest = sandbox.stub().resolves({
-                pv_power: 500
+                pv_power: 500,
             });
 
             await adapter.pollESStatus();
-            expect(adapter.setStateChangedAsync.calledWith('power.pv', { val: 500, ack: true })).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("power.pv", {val: 500, ack: true})).to.be.true;
         });
 
-        it('pollBatteryStatus updates states', async () => {
+        it("pollBatteryStatus updates states", async () => {
             adapter.sendRequest = sandbox.stub().resolves({
                 soc: 82,
                 bat_temp: 25,
                 bat_capacity: 5000,
                 rated_capacity: 10000,
                 charg_flag: true,
-                dischrg_flag: false
+                dischrg_flag: false,
             });
 
             await adapter.pollBatteryStatus();
-            expect(adapter.setStateChangedAsync.calledWith('battery.temperature', { val: 25, ack: true })).to.be.true;
-            expect(adapter.setStateChangedAsync.calledWith('battery.capacity', { val: 5000, ack: true })).to.be.true;
-            expect(adapter.setStateChangedAsync.calledWith('battery.ratedCapacity', { val: 10000, ack: true })).to.be.true;
-            expect(adapter.setStateChangedAsync.calledWith('battery.chargingAllowed', { val: true, ack: true })).to.be.true;
-            expect(adapter.setStateChangedAsync.calledWith('battery.dischargingAllowed', { val: false, ack: true })).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("battery.temperature", {val: 25, ack: true})).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("battery.capacity", {val: 5000, ack: true})).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("battery.ratedCapacity", {val: 10000, ack: true})).to.be
+                .true;
+            expect(adapter.setStateChangedAsync.calledWith("battery.chargingAllowed", {val: true, ack: true})).to.be
+                .true;
+            expect(adapter.setStateChangedAsync.calledWith("battery.dischargingAllowed", {val: false, ack: true})).to
+                .be.true;
         });
 
-        it('pollWifiStatus updates states', async () => {
+        it("pollWifiStatus updates states", async () => {
             adapter.sendRequest = sandbox.stub().resolves({
-                sta_ip: '192.168.1.100',
-                ssid: 'HomeWiFi',
-                rssi: -65
+                sta_ip: "192.168.1.100",
+                ssid: "HomeWiFi",
+                rssi: -65,
             });
 
             await adapter.pollWifiStatus();
-            expect(adapter.setStateChangedAsync.calledWith('network.ip', { val: '192.168.1.100', ack: true })).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("network.ip", {val: "192.168.1.100", ack: true})).to.be
+                .true;
         });
 
-        it('re-throws poll errors for retry handling', async () => {
-            adapter.sendRequest = sandbox.stub().rejects(new Error('Test error'));
-            
+        it("re-throws poll errors for retry handling", async () => {
+            adapter.sendRequest = sandbox.stub().rejects(new Error("Test error"));
+
             await adapter.pollESStatus().catch(e => {
-                expect(e.message).to.equal('Test error');
+                expect(e.message).to.equal("Test error");
             });
             await adapter.pollBatteryStatus().catch(e => {
-                expect(e.message).to.equal('Test error');
+                expect(e.message).to.equal("Test error");
             });
             await adapter.pollPVStatus().catch(e => {
-                expect(e.message).to.equal('Test error');
+                expect(e.message).to.equal("Test error");
             });
         });
 
-        it('pollEMStatus updates states', async () => {
+        it("pollEMStatus updates states", async () => {
             adapter.sendRequest = sandbox.stub().resolves({
                 ct_state: 1,
                 a_power: 100,
                 b_power: 200,
                 c_power: 300,
-                total_power: 600
+                total_power: 600,
             });
 
             await adapter.pollEMStatus();
-            expect(adapter.setStateChangedAsync.calledWith('energymeter.ctState', { val: 1, ack: true })).to.be.true;
-            expect(adapter.setStateChangedAsync.calledWith('energymeter.powerA', { val: 100, ack: true })).to.be.true;
-            expect(adapter.setStateChangedAsync.calledWith('energymeter.powerB', { val: 200, ack: true })).to.be.true;
-            expect(adapter.setStateChangedAsync.calledWith('energymeter.powerC', { val: 300, ack: true })).to.be.true;
-            expect(adapter.setStateChangedAsync.calledWith('energymeter.powerTotal', { val: 600, ack: true })).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("energymeter.ctState", {val: 1, ack: true})).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("energymeter.powerA", {val: 100, ack: true})).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("energymeter.powerB", {val: 200, ack: true})).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("energymeter.powerC", {val: 300, ack: true})).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("energymeter.powerTotal", {val: 600, ack: true})).to.be
+                .true;
         });
 
-        it('pollModeStatus updates control mode state', async () => {
+        it("pollModeStatus updates control mode state", async () => {
             adapter.sendRequest = sandbox.stub().resolves({
-                mode: 'AI'
+                mode: "AI",
             });
 
             await adapter.pollModeStatus();
-            expect(adapter.setStateChangedAsync.calledWith('control.mode', { val: 'AI', ack: true })).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("control.mode", {val: "AI", ack: true})).to.be.true;
         });
 
-        it('pollModeStatus handles null mode', async () => {
+        it("pollModeStatus handles null mode", async () => {
             adapter.sendRequest = sandbox.stub().resolves({});
 
             await adapter.pollModeStatus();
             expect(adapter.setStateChangedAsync.called).to.be.false;
         });
 
-        it('pollPVStatus handles null values', async () => {
+        it("pollPVStatus handles null values", async () => {
             adapter.sendRequest = sandbox.stub().resolves({});
 
             await adapter.pollPVStatus();
             expect(adapter.setStateChangedAsync.called).to.be.false;
         });
 
-        it('pollWifiStatus handles errors gracefully', async () => {
-            adapter.sendRequest = sandbox.stub().rejects(new Error('Network error'));
+        it("pollWifiStatus handles errors gracefully", async () => {
+            adapter.sendRequest = sandbox.stub().rejects(new Error("Network error"));
 
             await adapter.pollWifiStatus();
             expect(adapter.log.warn.calledWithMatch(/Wifi.GetStatus failed/)).to.be.true;
         });
 
-        it('pollBLEStatus updates BLE state', async () => {
-            adapter.sendRequest = sandbox.stub().resolves({ state: 'connected' });
+        it("pollBLEStatus updates BLE state", async () => {
+            adapter.sendRequest = sandbox.stub().resolves({state: "connected"});
 
             await adapter.pollBLEStatus();
-            expect(adapter.setStateChangedAsync.calledWith('network.bleState', { val: 'connected', ack: true })).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("network.bleState", {val: "connected", ack: true})).to.be
+                .true;
         });
 
-        it('pollBLEStatus handles errors gracefully', async () => {
-            adapter.sendRequest = sandbox.stub().rejects(new Error('BLE error'));
+        it("pollBLEStatus handles errors gracefully", async () => {
+            adapter.sendRequest = sandbox.stub().rejects(new Error("BLE error"));
 
             await adapter.pollBLEStatus();
             expect(adapter.log.warn.calledWithMatch(/BLE.GetStatus failed/)).to.be.true;
         });
 
-
-
-        it('pollPower updates all power states', async () => {
+        it("pollPower updates all power states", async () => {
             adapter.sendRequest = sandbox.stub().resolves({
                 pv_power: 500,
                 ongrid_power: 200,
                 bat_power: -100,
-                offgrid_power: 150
+                offgrid_power: 150,
             });
 
             await adapter.pollPower();
             expect(adapter.setStateChangedAsync.callCount).to.equal(4);
-            expect(adapter.setStateChangedAsync.calledWith('power.pv', { val: 500, ack: true })).to.be.true;
-            expect(adapter.setStateChangedAsync.calledWith('power.grid', { val: 200, ack: true })).to.be.true;
-            expect(adapter.setStateChangedAsync.calledWith('power.battery', { val: -100, ack: true })).to.be.true;
-            expect(adapter.setStateChangedAsync.calledWith('power.load', { val: 150, ack: true })).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("power.pv", {val: 500, ack: true})).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("power.grid", {val: 200, ack: true})).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("power.battery", {val: -100, ack: true})).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("power.load", {val: 150, ack: true})).to.be.true;
         });
 
-        it('pollPower handles partial response with some null values', async () => {
+        it("pollPower handles partial response with some null values", async () => {
             adapter.sendRequest = sandbox.stub().resolves({
                 pv_power: 500,
                 ongrid_power: null,
                 bat_power: undefined,
-                offgrid_power: 150
+                offgrid_power: 150,
             });
 
             await adapter.pollPower();
             expect(adapter.setStateChangedAsync.callCount).to.equal(2);
-            expect(adapter.setStateChangedAsync.calledWith('power.pv', { val: 500, ack: true })).to.be.true;
-            expect(adapter.setStateChangedAsync.calledWith('power.load', { val: 150, ack: true })).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("power.pv", {val: 500, ack: true})).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("power.load", {val: 150, ack: true})).to.be.true;
         });
 
-        it('pollPower handles errors gracefully', async () => {
-            adapter.sendRequest = sandbox.stub().rejects(new Error('Power error'));
+        it("pollPower handles errors gracefully", async () => {
+            adapter.sendRequest = sandbox.stub().rejects(new Error("Power error"));
 
             await adapter.pollPower();
             expect(adapter.log.warn.calledWithMatch(/pollPower failed/)).to.be.true;
         });
 
-        it('pollPVStatus updates pv power, voltage and current', async () => {
+        it("pollPVStatus updates pv power, voltage and current", async () => {
             adapter.sendRequest = sandbox.stub().resolves({
                 pv_power: 500,
                 pv_voltage: 220,
-                pv_current: 2.3
+                pv_current: 2.3,
             });
 
             await adapter.pollPVStatus();
             expect(adapter.setStateChangedAsync.callCount).to.equal(3);
-            expect(adapter.setStateChangedAsync.calledWith('power.pv', { val: 500, ack: true })).to.be.true;
-            expect(adapter.setStateChangedAsync.calledWith('power.pvVoltage', { val: 220, ack: true })).to.be.true;
-            expect(adapter.setStateChangedAsync.calledWith('power.pvCurrent', { val: 2.3, ack: true })).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("power.pv", {val: 500, ack: true})).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("power.pvVoltage", {val: 220, ack: true})).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("power.pvCurrent", {val: 2.3, ack: true})).to.be.true;
         });
 
-        it('pollPVStatus handles only voltage present', async () => {
+        it("pollPVStatus handles only voltage present", async () => {
             adapter.sendRequest = sandbox.stub().resolves({
                 pv_power: null,
                 pv_voltage: 220,
-                pv_current: null
+                pv_current: null,
             });
 
             await adapter.pollPVStatus();
             expect(adapter.setStateChangedAsync.callCount).to.equal(1);
-            expect(adapter.setStateChangedAsync.calledWith('power.pvVoltage', { val: 220, ack: true })).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("power.pvVoltage", {val: 220, ack: true})).to.be.true;
         });
 
-        it('pollPVStatus handles only current present', async () => {
+        it("pollPVStatus handles only current present", async () => {
             adapter.sendRequest = sandbox.stub().resolves({
                 pv_power: null,
                 pv_voltage: null,
-                pv_current: 2.3
+                pv_current: 2.3,
             });
 
             await adapter.pollPVStatus();
             expect(adapter.setStateChangedAsync.callCount).to.equal(1);
-            expect(adapter.setStateChangedAsync.calledWith('power.pvCurrent', { val: 2.3, ack: true })).to.be.true;
+            expect(adapter.setStateChangedAsync.calledWith("power.pvCurrent", {val: 2.3, ack: true})).to.be.true;
         });
     });
 
-    describe('onReady - discovery path', () => {
+    describe("onReady - discovery path", () => {
         beforeEach(async () => {
             adapter._socket = mockSocket;
         });
 
-        it('runs discovery when autoDiscovery enabled and no IP', async () => {
+        it("runs discovery when autoDiscovery enabled and no IP", async () => {
             const adapter2 = Adapter({
                 config: {
                     autoDiscovery: true,
-                    ipAddress: '',
+                    ipAddress: "",
                     udpPort: 30000,
-                    pollInterval: 10000
-                }
+                    pollInterval: 10000,
+                },
             });
             adapter2.discoverDevices = sandbox.stub().resolves();
             adapter2._pendingRequests.clear();
@@ -963,23 +1000,23 @@ describe('MarstekVenusAdapter', function() {
             expect(adapter2.discoverDevices.called).to.be.true;
         });
 
-        it('logs configured device IP', async () => {
+        it("logs configured device IP", async () => {
             adapter.log.info.resetHistory();
-            adapter.config.ipAddress = '192.168.1.50';
-            
+            adapter.config.ipAddress = "192.168.1.50";
+
             await adapter.onReady();
-            
+
             expect(adapter.log.info.calledWithMatch(/192.168.1.50/)).to.be.true;
         });
 
-        it('does not start polling when no IP and autoDiscovery disabled', async () => {
+        it("does not start polling when no IP and autoDiscovery disabled", async () => {
             const adapter3 = Adapter({
                 config: {
                     autoDiscovery: false,
-                    ipAddress: '',
+                    ipAddress: "",
                     udpPort: 30000,
-                    pollInterval: 10000
-                }
+                    pollInterval: 10000,
+                },
             });
             adapter3._pendingRequests.clear();
             adapter3._pollingInProgress = false;
@@ -990,12 +1027,12 @@ describe('MarstekVenusAdapter', function() {
             expect(adapter3._slowPollTimer).to.be.null;
         });
 
-        it('starts slow polling when IP is configured', async () => {
+        it("starts slow polling when IP is configured", async () => {
             adapter.startPolling();
             expect(adapter._slowPollTimer).to.not.be.null;
         });
 
-        it('pollSlow calls all slow poll functions', async () => {
+        it("pollSlow calls all slow poll functions", async () => {
             adapter.pollWifiStatus = sandbox.stub().resolves();
             adapter.pollBLEStatus = sandbox.stub().resolves();
 
@@ -1005,12 +1042,18 @@ describe('MarstekVenusAdapter', function() {
         });
     });
 
-    describe('onStateChange', () => {
+    describe("onStateChange", () => {
         beforeEach(async () => {
             await adapter.onReady();
-            if (adapter.fastPollInterval) clearInterval(adapter.fastPollInterval);
-            if (adapter._normalPollTimer) clearInterval(adapter._normalPollTimer);
-            if (adapter._slowPollTimer) clearInterval(adapter._slowPollTimer);
+            if (adapter.fastPollInterval) {
+                clearInterval(adapter.fastPollInterval);
+            }
+            if (adapter._normalPollTimer) {
+                clearInterval(adapter._normalPollTimer);
+            }
+            if (adapter._slowPollTimer) {
+                clearInterval(adapter._slowPollTimer);
+            }
             adapter.fastPollInterval = null;
             adapter._normalPollTimer = null;
             adapter._slowPollTimer = null;
@@ -1021,113 +1064,123 @@ describe('MarstekVenusAdapter', function() {
             adapter.getStateAsync = sandbox.stub();
         });
 
-        it('does nothing for acknowledged states', async () => {
-            await adapter.onStateChange('control.mode', { val: 'Auto', ack: true });
-            expect(adapter.sendRequest.calledWith('ES.SetMode')).to.be.false;
+        it("does nothing for acknowledged states", async () => {
+            await adapter.onStateChange("control.mode", {val: "Auto", ack: true});
+            expect(adapter.sendRequest.calledWith("ES.SetMode")).to.be.false;
         });
 
-        it('does nothing for unknown state changes', async () => {
-            await adapter.onStateChange('power.pv', { val: 100, ack: false });
-            expect(adapter.sendRequest.calledWith('ES.SetMode')).to.be.false;
+        it("does nothing for unknown state changes", async () => {
+            await adapter.onStateChange("power.pv", {val: 100, ack: false});
+            expect(adapter.sendRequest.calledWith("ES.SetMode")).to.be.false;
         });
 
-        it('handles onStateChange errors gracefully', async () => {
-            adapter.getStateAsync.rejects(new Error('State error'));
+        it("handles onStateChange errors gracefully", async () => {
+            adapter.getStateAsync.rejects(new Error("State error"));
 
             try {
-                await adapter.onStateChange('control.mode', { val: 'Auto', ack: false });
-            } catch (e) {
+                await adapter.onStateChange("control.mode", {val: "Auto", ack: false});
+            } catch {
                 // Expected to throw
             }
             expect(adapter.log.error.calledWithMatch(/Failed to set/)).to.be.true;
         });
 
-        it('updates passive control values when not in Manual mode', async () => {
+        it("updates passive control values when not in Manual mode", async () => {
             adapter.getStateAsync = sandbox.stub();
-            adapter.getStateAsync.withArgs('control.mode').resolves({ val: 'Passive' });
-            adapter.getStateAsync.withArgs('control.passivePower').resolves({ val: 500 });
-            adapter.getStateAsync.withArgs('control.passiveDuration').resolves({ val: 600 });
+            adapter.getStateAsync.withArgs("control.mode").resolves({val: "Passive"});
+            adapter.getStateAsync.withArgs("control.passivePower").resolves({val: 500});
+            adapter.getStateAsync.withArgs("control.passiveDuration").resolves({val: 600});
 
-            await adapter.onStateChange('control.passivePower', { val: 300, ack: false });
+            await adapter.onStateChange("control.passivePower", {val: 300, ack: false});
 
             expect(adapter.log.error.called).to.be.false;
         });
 
-        it('handles null mode state', async () => {
+        it("handles null mode state", async () => {
             adapter.getStateAsync = sandbox.stub();
-            adapter.getStateAsync.withArgs('control.mode').resolves(null);
+            adapter.getStateAsync.withArgs("control.mode").resolves(null);
 
-            await adapter.onStateChange('control.passivePower', { val: 300, ack: false });
+            await adapter.onStateChange("control.passivePower", {val: 300, ack: false});
 
-            expect(adapter.sendRequest.calledWith('ES.SetMode')).to.be.false;
+            expect(adapter.sendRequest.calledWith("ES.SetMode")).to.be.false;
         });
 
-        it('updates Manual mode settings when manual control changes', async () => {
+        it("updates Manual mode settings when manual control changes", async () => {
             adapter.getStateAsync = sandbox.stub();
-            adapter.getStateAsync.withArgs('control.mode').resolves({ val: 'Manual' });
-            adapter.getStateAsync.withArgs('control.manualTimeNum').resolves({ val: 2 });
-            adapter.getStateAsync.withArgs('control.manualStartTime').resolves({ val: '06:00' });
-            adapter.getStateAsync.withArgs('control.manualEndTime').resolves({ val: '18:00' });
-            adapter.getStateAsync.withArgs('control.manualWeekdays').resolves({ val: 65 });
-            adapter.getStateAsync.withArgs('control.manualPower').resolves({ val: 2000 });
-            adapter.getStateAsync.withArgs('control.manualEnable').resolves({ val: false });
+            adapter.getStateAsync.withArgs("control.mode").resolves({val: "Manual"});
+            adapter.getStateAsync.withArgs("control.manualTimeNum").resolves({val: 2});
+            adapter.getStateAsync.withArgs("control.manualStartTime").resolves({val: "06:00"});
+            adapter.getStateAsync.withArgs("control.manualEndTime").resolves({val: "18:00"});
+            adapter.getStateAsync.withArgs("control.manualWeekdays").resolves({val: 65});
+            adapter.getStateAsync.withArgs("control.manualPower").resolves({val: 2000});
+            adapter.getStateAsync.withArgs("control.manualEnable").resolves({val: false});
 
-            await adapter.onStateChange('control.manualPower', { val: 1500, ack: false });
+            await adapter.onStateChange("control.manualPower", {val: 1500, ack: false});
 
-            expect(adapter.sendRequest.calledWith('ES.SetMode', sinon.match({
-                id: 0,
-                config: sinon.match({
-                    mode: 'Manual',
-                    manual_cfg: sinon.match({
-                        time_num: 2,
-                        start_time: '06:00',
-                        end_time: '18:00',
-                        week_set: 65,
-                        power: 2000,
-                        enable: 0
-                    })
-                })
-            }))).to.be.true;
+            expect(
+                adapter.sendRequest.calledWith(
+                    "ES.SetMode",
+                    sinon.match({
+                        id: 0,
+                        config: sinon.match({
+                            mode: "Manual",
+                            manual_cfg: sinon.match({
+                                time_num: 2,
+                                start_time: "06:00",
+                                end_time: "18:00",
+                                week_set: 65,
+                                power: 2000,
+                                enable: 0,
+                            }),
+                        }),
+                    }),
+                ),
+            ).to.be.true;
         });
 
-        it('does not update Manual settings when not in Manual mode', async () => {
+        it("does not update Manual settings when not in Manual mode", async () => {
             adapter.getStateAsync = sandbox.stub();
-            adapter.getStateAsync.withArgs('control.mode').resolves({ val: 'Auto' });
+            adapter.getStateAsync.withArgs("control.mode").resolves({val: "Auto"});
 
-            await adapter.onStateChange('control.manualPower', { val: 1500, ack: false });
+            await adapter.onStateChange("control.manualPower", {val: 1500, ack: false});
 
-            expect(adapter.sendRequest.calledWith('ES.SetMode')).to.be.false;
+            expect(adapter.sendRequest.calledWith("ES.SetMode")).to.be.false;
         });
 
-        it('handles missing manual control states with defaults', async () => {
+        it("handles missing manual control states with defaults", async () => {
             adapter.getStateAsync = sandbox.stub();
-            adapter.getStateAsync.withArgs('control.mode').resolves({ val: 'Manual' });
-            adapter.getStateAsync.withArgs('control.manualTimeNum').resolves(null);
-            adapter.getStateAsync.withArgs('control.manualStartTime').resolves(null);
-            adapter.getStateAsync.withArgs('control.manualEndTime').resolves(null);
-            adapter.getStateAsync.withArgs('control.manualWeekdays').resolves(null);
-            adapter.getStateAsync.withArgs('control.manualPower').resolves(null);
-            adapter.getStateAsync.withArgs('control.manualEnable').resolves(null);
+            adapter.getStateAsync.withArgs("control.mode").resolves({val: "Manual"});
+            adapter.getStateAsync.withArgs("control.manualTimeNum").resolves(null);
+            adapter.getStateAsync.withArgs("control.manualStartTime").resolves(null);
+            adapter.getStateAsync.withArgs("control.manualEndTime").resolves(null);
+            adapter.getStateAsync.withArgs("control.manualWeekdays").resolves(null);
+            adapter.getStateAsync.withArgs("control.manualPower").resolves(null);
+            adapter.getStateAsync.withArgs("control.manualEnable").resolves(null);
 
-            await adapter.onStateChange('control.manualTimeNum', { val: 1, ack: false });
+            await adapter.onStateChange("control.manualTimeNum", {val: 1, ack: false});
 
-            expect(adapter.sendRequest.calledWith('ES.SetMode', sinon.match({
-                config: sinon.match({
-                    manual_cfg: sinon.match({
-                        time_num: 0,
-                        start_time: '00:00',
-                        end_time: '23:59',
-                        week_set: 127,
-                        power: 100,
-                        enable: 0
-                    })
-                })
-            }))).to.be.true;
+            expect(
+                adapter.sendRequest.calledWith(
+                    "ES.SetMode",
+                    sinon.match({
+                        config: sinon.match({
+                            manual_cfg: sinon.match({
+                                time_num: 0,
+                                start_time: "00:00",
+                                end_time: "23:59",
+                                week_set: 127,
+                                power: 100,
+                                enable: 0,
+                            }),
+                        }),
+                    }),
+                ),
+            ).to.be.true;
         });
     });
 
-    describe('onUnload', () => {
-        it('handles errors during cleanup', (done) => {
+    describe("onUnload", () => {
+        it("handles errors during cleanup", done => {
             adapter._socket = null;
             adapter._normalPollTimer = null;
             adapter._slowPollTimer = null;
@@ -1138,7 +1191,7 @@ describe('MarstekVenusAdapter', function() {
             });
         });
 
-        it('handles exception during cleanup', (done) => {
+        it("handles exception during cleanup", done => {
             adapter._socket = null;
             adapter._normalPollTimer = null;
             adapter._slowPollTimer = null;
@@ -1150,11 +1203,11 @@ describe('MarstekVenusAdapter', function() {
         });
     });
 
-    describe('discoverDevices()', () => {
+    describe("discoverDevices()", () => {
         beforeEach(async () => {
             await adapter.onReady();
             adapter._socket = {send: sandbox.stub().yields(null)};
-            sandbox.stub(adapter, 'setTimeout').callsFake((fn) => {
+            sandbox.stub(adapter, "setTimeout").callsFake(fn => {
                 fn();
                 return {};
             });
@@ -1164,7 +1217,7 @@ describe('MarstekVenusAdapter', function() {
             sandbox.restore();
         });
 
-        it('sends all 3 discovery attempts to broadcast and multicast', async () => {
+        it("sends all 3 discovery attempts to broadcast and multicast", async () => {
             await adapter.discoverDevices();
             expect(adapter._socket.send.callCount).to.equal(6);
             // Verify broadcast (255.255.255.255) and multicast (239.255.255.250) are called for each attempt
@@ -1173,27 +1226,27 @@ describe('MarstekVenusAdapter', function() {
             expect(calls.length).to.equal(6);
         });
 
-        it('handles broadcast send errors gracefully', async () => {
-            adapter._socket.send.onFirstCall().yields(new Error('Broadcast failed'));
+        it("handles broadcast send errors gracefully", async () => {
+            adapter._socket.send.onFirstCall().yields(new Error("Broadcast failed"));
             await adapter.discoverDevices();
             expect(adapter.log.error.calledOnce).to.be.true;
         });
 
-        it('handles multicast send errors as debug only', async () => {
-            adapter._socket.send.onSecondCall().yields(new Error('Multicast failed'));
+        it("handles multicast send errors as debug only", async () => {
+            adapter._socket.send.onSecondCall().yields(new Error("Multicast failed"));
             await adapter.discoverDevices();
             expect(adapter.log.debug.called).to.be.true;
             expect(adapter.log.error.called).to.be.false;
         });
 
-        it('catches exceptions during discovery attempts', async () => {
-            adapter._socket.send.throws(new Error('Send exception'));
+        it("catches exceptions during discovery attempts", async () => {
+            adapter._socket.send.throws(new Error("Send exception"));
             await adapter.discoverDevices();
             expect(adapter.log.error.called).to.be.true;
         });
     });
 
-    describe('setControlTarget', () => {
+    describe("setControlTarget", () => {
         beforeEach(async () => {
             await adapter.onReady();
             adapter.sendRequest = sandbox.stub().resolves();
@@ -1201,22 +1254,22 @@ describe('MarstekVenusAdapter', function() {
             adapter._pendingRequestsByMethod = new Map();
         });
 
-        it('handles valid control values', async () => {
+        it("handles valid control values", async () => {
             await adapter.setControlTarget(150);
-            expect(adapter.sendRequest.calledWith('Marstek.SetTargetPower', { power: 150 })).to.be.true;
+            expect(adapter.sendRequest.calledWith("Marstek.SetTargetPower", {power: 150})).to.be.true;
         });
 
-        it('clamps values within min/max range', async () => {
+        it("clamps values within min/max range", async () => {
             await adapter.setControlTarget(-2000);
-            expect(adapter.sendRequest.calledWith('Marstek.SetTargetPower', { power: -1500 })).to.be.true;
-            
+            expect(adapter.sendRequest.calledWith("Marstek.SetTargetPower", {power: -1500})).to.be.true;
+
             await adapter.setControlTarget(2000);
-            expect(adapter.sendRequest.calledWith('Marstek.SetTargetPower', { power: 1500 })).to.be.true;
+            expect(adapter.sendRequest.calledWith("Marstek.SetTargetPower", {power: 1500})).to.be.true;
         });
 
-        it('ignores null and undefined values', async () => {
+        it("ignores null and undefined values", async () => {
             await adapter.setControlTarget(null);
-            expect(adapter.sendRequest.calledWith('Marstek.SetTargetPower')).to.be.false;
+            expect(adapter.sendRequest.calledWith("Marstek.SetTargetPower")).to.be.false;
         });
     });
 });

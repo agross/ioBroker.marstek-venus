@@ -1,14 +1,21 @@
-'use strict';
+"use strict";
 
-const utils = require('@iobroker/adapter-core');
-const dgram = require('node:dgram');
-const { RateLimitQueue } = require('./lib/request-queue');
+const utils = require("@iobroker/adapter-core");
+const dgram = require("node:dgram");
+const {RateLimitQueue} = require("./lib/request-queue");
 
+/**
+ *
+ */
 class MarstekVenusAdapter extends utils.Adapter {
+    /**
+     *
+     * @param options
+     */
     constructor(options = {}) {
         super({
             ...options,
-            name: 'marstek-venus',
+            name: "marstek-venus",
         });
 
         this._socket = null;
@@ -23,31 +30,34 @@ class MarstekVenusAdapter extends utils.Adapter {
         this._pollingInProgress = false;
         this._pollFailureCount = 0;
 
-        this.on('ready', () => this.onReady());
-        this.on('stateChange', (id, state) => this.onStateChange(id, state));
-        this.on('unload', (callback) => this.onUnload(callback));
-        this.on('message', (obj) => this.onMessage(obj));
+        this.on("ready", () => this.onReady());
+        this.on("stateChange", (id, state) => this.onStateChange(id, state));
+        this.on("unload", callback => this.onUnload(callback));
+        this.on("message", obj => this.onMessage(obj));
     }
 
+    /**
+     *
+     */
     async onReady() {
-        this.log.info('Starting Marstek Venus adapter');
+        this.log.info("Starting Marstek Venus adapter");
 
         await this.initStates();
 
-        this._socket = dgram.createSocket('udp4');
+        this._socket = dgram.createSocket("udp4");
 
-        this._socket.on('error', (err) => {
+        this._socket.on("error", err => {
             this.log.error(`UDP socket error: ${err.message}`);
         });
 
-        this._socket.on('message', this.handleResponse.bind(this));
+        this._socket.on("message", this.handleResponse.bind(this));
 
         this._socket.bind(0, () => {
             this._socket.setBroadcast(true);
             const address = this._socket.address();
             this.log.debug(`UDP socket bound successfully to ${address.address}:${address.port}`);
 
-            this._requestQueue = new RateLimitQueue({ intervalMs: 250 });
+            this._requestQueue = new RateLimitQueue({intervalMs: 250});
 
             if (this.config.autoDiscovery && !this.config.ipAddress) {
                 this.discoverDevices().catch(err => this.log.error(`Discovery failed: ${err.message}`));
@@ -55,15 +65,20 @@ class MarstekVenusAdapter extends utils.Adapter {
                 this.log.info(`Using configured device: ${this.config.ipAddress}:${this.config.udpPort}`);
                 this.startPolling();
             } else {
-                this.log.warn('No device configured and auto-discovery disabled');
+                this.log.warn("No device configured and auto-discovery disabled");
             }
         });
     }
 
+    /**
+     *
+     * @param method
+     * @param params
+     */
     async sendRequest(method, params = {}) {
         if (!this._requestQueue) {
-            this.log.error('sendRequest: Request queue not initialized');
-            throw new Error('Request queue not initialized');
+            this.log.error("sendRequest: Request queue not initialized");
+            throw new Error("Request queue not initialized");
         }
 
         const targetIP = this._discoveredIP || this.config.ipAddress;
@@ -75,7 +90,7 @@ class MarstekVenusAdapter extends utils.Adapter {
 
         this._pendingRequestsByMethod = this._pendingRequestsByMethod || new Map();
 
-        const PLACEHOLDER = Symbol('pending');
+        const PLACEHOLDER = Symbol("pending");
 
         const existing = this._pendingRequestsByMethod.get(method);
         if (existing === PLACEHOLDER) {
@@ -109,50 +124,62 @@ class MarstekVenusAdapter extends utils.Adapter {
         const maxRetries = this.config.maxRetries || 1;
         const timeoutMs = this.config.requestTimeout || 2000;
         const id = this._requestId++;
-        const request = { id, method, params };
+        const request = {id, method, params};
         const message = Buffer.from(JSON.stringify(request));
 
-        const promise = this._requestQueue.enqueue(() => new Promise((resolve, reject) => {
-            let retryCount = 0;
+        const promise = this._requestQueue.enqueue(
+            () =>
+                new Promise((resolve, reject) => {
+                    let retryCount = 0;
 
-            const sendOnce = () => {
-                const timeout = this.setTimeout(() => {
-                    const pending = this._pendingRequests.get(id);
-                    if (!pending) return;
+                    const sendOnce = () => {
+                        const timeout = this.setTimeout(() => {
+                            const pending = this._pendingRequests.get(id);
+                            if (!pending) {
+                                return;
+                            }
 
-                    retryCount++;
-                    if (retryCount < maxRetries) {
-                        this.log.debug(`Retry ${retryCount}/${maxRetries} for ${method}`);
-                        sendOnce();
-                    } else {
-                        this._pendingRequests.delete(id);
-                        this._pendingRequestsByMethod.delete(method);
-                        this.log.warn(`sendRequest ${method} failed after ${maxRetries} attempts`);
-                        reject(new Error(`Request ${method} timed out after ${maxRetries} attempts`));
-                    }
-                }, timeoutMs);
+                            retryCount++;
+                            if (retryCount < maxRetries) {
+                                this.log.debug(`Retry ${retryCount}/${maxRetries} for ${method}`);
+                                sendOnce();
+                            } else {
+                                this._pendingRequests.delete(id);
+                                this._pendingRequestsByMethod.delete(method);
+                                this.log.warn(`sendRequest ${method} failed after ${maxRetries} attempts`);
+                                reject(new Error(`Request ${method} timed out after ${maxRetries} attempts`));
+                            }
+                        }, timeoutMs);
 
-                this._pendingRequests.set(id, {resolve, reject, timeout, method});
+                        this._pendingRequests.set(id, {resolve, reject, timeout, method});
 
-                this.log.debug(`Sending ${method} to ${targetIP}:${this.config.udpPort} (attempt ${retryCount + 1}/${maxRetries})`);
-                this._socket.send(message, 0, message.length, this.config.udpPort, targetIP, (err) => {
-                    if (err) {
-                        this.clearTimeout(timeout);
-                        this._pendingRequests.delete(id);
-                        this._pendingRequestsByMethod.delete(method);
-                        this.log.error(`sendRequest ${method} to ${targetIP} send error: ${err.message}`);
-                        reject(err);
-                    }
-                });
-            };
+                        this.log.debug(
+                            `Sending ${method} to ${targetIP}:${this.config.udpPort} (attempt ${retryCount + 1}/${maxRetries})`,
+                        );
+                        this._socket.send(message, 0, message.length, this.config.udpPort, targetIP, err => {
+                            if (err) {
+                                this.clearTimeout(timeout);
+                                this._pendingRequests.delete(id);
+                                this._pendingRequestsByMethod.delete(method);
+                                this.log.error(`sendRequest ${method} to ${targetIP} send error: ${err.message}`);
+                                reject(err);
+                            }
+                        });
+                    };
 
-            sendOnce();
-        }));
+                    sendOnce();
+                }),
+        );
 
         this._pendingRequestsByMethod.set(method, promise);
         return promise;
     }
 
+    /**
+     *
+     * @param msgBuffer
+     * @param rinfo
+     */
     handleResponse(msgBuffer, rinfo) {
         try {
             const response = JSON.parse(msgBuffer.toString());
@@ -186,9 +213,12 @@ class MarstekVenusAdapter extends utils.Adapter {
                         this._discoveredIP = response.result.ip;
                         this.log.info(`Auto-selecting discovered device: ${this._discoveredIP}`);
                         this.startPolling();
-                        this.setStateAsync('info.device', { val: response.result.device, ack: true });
-                        this.setStateAsync('info.firmware', { val: response.result.ver, ack: true });
-                        this.setStateAsync('info.mac', { val: response.result.ble_mac || response.result.wifi_mac, ack: true });
+                        this.setStateAsync("info.device", {val: response.result.device, ack: true});
+                        this.setStateAsync("info.firmware", {val: response.result.ver, ack: true});
+                        this.setStateAsync("info.mac", {
+                            val: response.result.ble_mac || response.result.wifi_mac,
+                            ack: true,
+                        });
                     } else {
                         this.log.info(`Device discovered but using configured IP: ${this.config.ipAddress}`);
                     }
@@ -205,6 +235,9 @@ class MarstekVenusAdapter extends utils.Adapter {
         }
     }
 
+    /**
+     *
+     */
     startFastPolling() {
         this.log.info(`Starting fast polling loop (every ${this.config.fastPollInterval || 1000}ms)`);
         if (this._fastPollTimer) {
@@ -215,8 +248,11 @@ class MarstekVenusAdapter extends utils.Adapter {
         this.pollPower();
     }
 
+    /**
+     *
+     */
     startPolling() {
-        this.log.info('Starting polling loop');
+        this.log.info("Starting polling loop");
         if (this._normalPollTimer) {
             this.clearInterval(this._normalPollTimer);
             this._normalPollTimer = null;
@@ -227,8 +263,11 @@ class MarstekVenusAdapter extends utils.Adapter {
         this.poll();
     }
 
+    /**
+     *
+     */
     startSlowPolling() {
-        this.log.info('Starting slow polling loop (info + network every 10 min)');
+        this.log.info("Starting slow polling loop (info + network every 10 min)");
         if (this._slowPollTimer) {
             this.clearInterval(this._slowPollTimer);
             this._slowPollTimer = null;
@@ -237,52 +276,72 @@ class MarstekVenusAdapter extends utils.Adapter {
         this.pollSlow();
     }
 
+    /**
+     *
+     * @param obj
+     */
     async onMessage(obj) {
-        if (obj.command === 'discover') {
+        if (obj.command === "discover") {
             await this.discoverDevices();
-            if (obj.callback) this.sendTo(obj.from, obj.command, {
-                success: !!this._discoveredIP,
-                ipAddress: this._discoveredIP || null
-            }, obj.callback);
-        } else if (obj.command === 'setSettings') {
+            if (obj.callback) {
+                this.sendTo(
+                    obj.from,
+                    obj.command,
+                    {
+                        success: !!this._discoveredIP,
+                        ipAddress: this._discoveredIP || null,
+                    },
+                    obj.callback,
+                );
+            }
+        } else if (obj.command === "setSettings") {
             const settings = obj.values;
             this.config.autoDiscovery = settings.autoDiscovery;
             this.config.ipAddress = settings.ipAddress;
             this.config.udpPort = settings.udpPort;
             this.config.pollInterval = settings.pollInterval;
 
-            await this.setObject('system.adapter.marstek-venus.0', {
-                type: 'instance',
+            await this.setObject("system.adapter.marstek-venus.0", {
+                type: "instance",
                 native: {
                     autoDiscovery: settings.autoDiscovery,
                     ipAddress: settings.ipAddress,
                     udpPort: settings.udpPort,
-                    pollInterval: settings.pollInterval
-                }
+                    pollInterval: settings.pollInterval,
+                },
             });
 
-            this.log.info('Settings saved and persisted');
+            this.log.info("Settings saved and persisted");
 
             if (obj.callback) {
-                this.sendTo(obj.from, obj.command, { success: true }, obj.callback);
+                this.sendTo(obj.from, obj.command, {success: true}, obj.callback);
             }
-        } else if (obj.command === 'getSettings') {
+        } else if (obj.command === "getSettings") {
             if (obj.callback) {
-                this.sendTo(obj.from, obj.command, {
-                    values: {
-                        autoDiscovery: this.config.autoDiscovery,
-                        ipAddress: this.config.ipAddress,
-                        udpPort: this.config.udpPort,
-                        pollInterval: this.config.pollInterval
-                    }
-                }, obj.callback);
+                this.sendTo(
+                    obj.from,
+                    obj.command,
+                    {
+                        values: {
+                            autoDiscovery: this.config.autoDiscovery,
+                            ipAddress: this.config.ipAddress,
+                            udpPort: this.config.udpPort,
+                            pollInterval: this.config.pollInterval,
+                        },
+                    },
+                    obj.callback,
+                );
             }
         }
     }
 
+    /**
+     *
+     * @param callback
+     */
     onUnload(callback) {
         try {
-            this.log.info('Shutting down Marstek Venus adapter');
+            this.log.info("Shutting down Marstek Venus adapter");
 
             if (this._normalPollTimer) {
                 this.clearInterval(this._normalPollTimer);
@@ -296,32 +355,38 @@ class MarstekVenusAdapter extends utils.Adapter {
                 this.clearInterval(this._fastPollTimer);
                 this._fastPollTimer = null;
             }
-            if (this._requestQueue) this._requestQueue.clear();
-            if (this._socket) this._socket.close();
+            if (this._requestQueue) {
+                this._requestQueue.clear();
+            }
+            if (this._socket) {
+                this._socket.close();
+            }
 
             for (const [id, pending] of this._pendingRequests) {
                 this.clearTimeout(pending.timeout);
-                pending.reject(new Error('Adapter shutting down'));
+                pending.reject(new Error("Adapter shutting down"));
                 this._pendingRequests.delete(id);
             }
 
             callback();
-        } catch (e) {
+        } catch {
             callback();
         }
     }
 }
 
-const { Adapter: AdapterMixin } = require('./lib/adapter');
-const { Polling } = require('./lib/polling');
-const { Control } = require('./lib/control');
-const { Discovery } = require('./lib/discovery');
+const {Adapter: AdapterMixin} = require("./lib/adapter");
+const {Polling} = require("./lib/polling");
+const {Control} = require("./lib/control");
+const {Discovery} = require("./lib/discovery");
 
 Object.assign(MarstekVenusAdapter.prototype, utils.Adapter.prototype);
 
 // Helper function to copy methods from mixin to prototype
 function copyMethods(target, source) {
-    if (!source) return;
+    if (!source) {
+        return;
+    }
     if (source.prototype && Object.getPrototypeOf(source.prototype)) {
         // It's a class - copy from prototype
         Object.defineProperties(target, Object.getOwnPropertyDescriptors(source.prototype));
@@ -331,14 +396,22 @@ function copyMethods(target, source) {
     }
 }
 
-if (AdapterMixin) copyMethods(MarstekVenusAdapter.prototype, AdapterMixin);
-if (Polling) copyMethods(MarstekVenusAdapter.prototype, Polling);
-if (Control) copyMethods(MarstekVenusAdapter.prototype, Control);
-if (Discovery) copyMethods(MarstekVenusAdapter.prototype, Discovery);
+if (AdapterMixin) {
+    copyMethods(MarstekVenusAdapter.prototype, AdapterMixin);
+}
+if (Polling) {
+    copyMethods(MarstekVenusAdapter.prototype, Polling);
+}
+if (Control) {
+    copyMethods(MarstekVenusAdapter.prototype, Control);
+}
+if (Discovery) {
+    copyMethods(MarstekVenusAdapter.prototype, Discovery);
+}
 
 // Export both the class and the factory
 module.exports = MarstekVenusAdapter;
-module.exports.createAdapter = (options) => new MarstekVenusAdapter(options);
+module.exports.createAdapter = options => new MarstekVenusAdapter(options);
 
 if (!module.parent) {
     new MarstekVenusAdapter();
