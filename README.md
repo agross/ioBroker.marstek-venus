@@ -188,7 +188,7 @@ SOFTWARE.
 
 ## Changelog
 
-## 0.1.7 (2026-04-12)
+### **WORK IN PROGRESS**
 - fix adapter checker issues
 - add npm deploy
 
