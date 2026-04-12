@@ -109,6 +109,12 @@
     "adminUI": {
       "config": "json"
     },
+    "words": [
+      {
+        "language": "en",
+        "file": "admin/words.js"
+      }
+    ],
     "supportedMessages": {}
   },
   "native": {

@@ -18,7 +18,7 @@
     },
     "ipAddress": {
       "type": "text",
-      "label": "Device IP Address",
+      "label": "$t:ipAddress",
       "placeholder": "192.168.1.xxx",
       "xs": 12,
       "sm": 6,
@@ -29,7 +29,7 @@
     },
     "udpPort": {
       "type": "number",
-      "label": "UDP Port",
+      "label": "$t:udpPort",
       "min": 1,
       "max": 65535,
       "default": 30000,
@@ -41,7 +41,7 @@
     },
     "pollInterval": {
       "type": "number",
-      "label": "Poll interval (ms)",
+      "label": "$t:pollInterval",
       "min": 500,
       "max": 60000,
       "default": 10000,
@@ -54,7 +54,7 @@
     },
     "fastPollInterval": {
       "type": "number",
-      "label": "Fast poll interval (ms)",
+      "label": "$t:fastPollInterval",
       "min": 100,
       "max": 10000,
       "default": 1000,
@@ -66,7 +66,7 @@
     },
     "requestTimeout": {
       "type": "number",
-      "label": "Request timeout (ms)",
+      "label": "$t:requestTimeout",
       "min": 1000,
       "max": 30000,
       "default": 5000,
@@ -79,7 +79,7 @@
     },
     "maxRetries": {
       "type": "number",
-      "label": "Max retries",
+      "label": "$t:maxRetries",
       "min": 0,
       "max": 5,
       "default": 1,
@@ -91,7 +91,7 @@
     },
     "autoDiscovery": {
       "type": "checkbox",
-      "label": "Auto discover devices on network",
+      "label": "$t:autoDiscovery",
       "default": true,
       "xs": 12,
       "sm": 12,
