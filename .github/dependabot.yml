@@ -9,7 +9,7 @@ updates:
     directory: '/'
     schedule:
       interval: 'monthly'
-      time: '04:00'
+      cron: '17 3 7 * *'
       timezone: 'Europe/Berlin'
     open-pull-requests-limit: 15
     versioning-strategy: 'increase'
@@ -20,7 +20,7 @@ updates:
     directory: '/'
     schedule:
       interval: monthly
-      time: '04:00'
+      cron: '41 5 10 * *'
       timezone: Europe/Berlin
     open-pull-requests-limit: 15
     cooldown:
