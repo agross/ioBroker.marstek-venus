@@ -188,7 +188,7 @@ SOFTWARE.
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.1.8 (2026-04-12)
 - fix adapter checker issues
 
 ### 0.1.7 (2026-04-12)
@@ -201,7 +201,6 @@ SOFTWARE.
 
 ### 0.1.5 (2026-04-11)
 - Initial release with full Marstek Venus Open API support
-
 
 ## Support
 
