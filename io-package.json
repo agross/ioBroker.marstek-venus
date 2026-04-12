@@ -67,9 +67,11 @@
         "js-controller": ">=6.0.11"
       }
     ],
-    "globalDependencies": {
-      "admin": ">=7.6.17"
-    },
+    "globalDependencies": [
+      {
+        "admin": ">=7.6.17"
+      }
+    ],
     "keywords": [
       "marstek",
       "venus",
