@@ -80,6 +80,8 @@
       "type": "free"
     },
     "enabled": false,
+    "loglevel": "info",
+    "readme": "https://github.com/Slugger2k/ioBroker.marstek-venus/blob/master/README.md",
     "platform": "Javascript/Node.js",
     "mode": "daemon",
     "compact": true,
