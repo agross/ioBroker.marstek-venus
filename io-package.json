@@ -2,14 +2,31 @@
   "common": {
     "name": "marstek-venus",
     "version": "0.1.4",
-    "title": "Marstek Venus",
     "titleLang": {
       "en": "Marstek Venus Energy Storage",
-      "de": "Marstek Venus Energiespeicher"
+      "de": "Marstek Venus Energiespeicher",
+      "ru": "Marstek Venus накопитель энергии",
+      "pt": "Marstek Venus Armazenamento de Energia",
+      "nl": "Marstek Venus Energieopslag",
+      "fr": "Marstek Venus Stockage d'énergie",
+      "it": "Marstek Venus Accumulo di energia",
+      "es": "Marstek Venus Almacenamiento de energía",
+      "pl": "Marstek Venus Magazyn energii",
+      "uk": "Marstek Venus Накопичувач енергії",
+      "zh-cn": "Marstek Venus 储能"
     },
     "desc": {
       "en": "Adapter for Marstek Venus C/D/E energy storage devices",
-      "de": "Adapter für Marstek Venus C/D/E Energiespeichergeräte"
+      "de": "Adapter für Marstek Venus C/D/E Energiespeichergeräte",
+      "ru": "Адаптер для устройств накопления энергии Marstek Venus C/D/E",
+      "pt": "Adaptador para dispositivos de armazenamento de energia Marstek Venus C/D/E",
+      "nl": "Adapter voor Marstek Venus C/D/E energieopslagapparaten",
+      "fr": "Adaptateur pour les dispositifs de stockage d'énergie Marstek Venus C/D/E",
+      "it": "Adapter per dispositivi di accumulo energetico Marstek Venus C/D/E",
+      "es": "Adaptador para dispositivos de almacenamiento de energía Marstek Venus C/D/E",
+      "pl": "Adapter do urządzeń magazynowania energii Marstek Venus C/D/E",
+      "uk": "Адаптер для пристроїв накопичення енергії Marstek Venus C/D/E",
+      "zh-cn": "Marstek Venus C/D/E 储能设备适配器"
     },
     "descLang": {
       "en": "Integrates Marstek Venus battery inverters with ioBroker using official local Open API",
@@ -18,19 +35,55 @@
     "news": {
       "0.1.4": {
         "en": "Fixed repository validation issues, updated adapter naming conventions",
-        "de": "Repository-Validierungsprobleme behoben, Adapter-Namenskonventionen aktualisiert"
+        "de": "Repository-Validierungsprobleme behoben, Adapter-Namenskonventionen aktualisiert",
+        "ru": "Исправлены проблемы проверки репозитория, обновлены соглашения об именовании адаптеров",
+        "pt": "Corrigidos problemas de validação do repositório, atualizadas convenções de nomenclatura do adaptador",
+        "nl": "Repository-validatieproblemen opgelost, adapter naamgevingsconventies bijgewerkt",
+        "fr": "Corrigé les problèmes de validation du dépôt, mis à jour les conventions de nommage des adaptateurs",
+        "it": "Risolti problemi di validazione del repository, aggiornate le convenzioni di denominazione dell'adapter",
+        "es": "Corregidos problemas de validación del repositorio, actualizadas convenciones de nomenclatura del adaptador",
+        "pl": "Naprawiono problemy z walidacją repozytorium, zaktualizowano konwencje nazewnictwa adaptera",
+        "uk": "Виправлено проблеми перевірки репозиторію, оновлено угоди про найменування адаптерів",
+        "zh-cn": "修复了存储库验证问题，更新了适配器命名规范"
       },
       "0.1.2": {
         "en": "Removed invalid ES.GetInfo call, device info obtained via discovery only",
-        "de": "Ungültiger ES.GetInfo Aufruf entfernt, Geräteinformationen werden nur über Discovery abgerufen"
+        "de": "Ungültiger ES.GetInfo Aufruf entfernt, Geräteinformationen werden nur über Discovery abgerufen",
+        "ru": "Удален недопустимый вызов ES.GetInfo, информация об устройстве получается только через обнаружение",
+        "pt": "Removida chamada ES.GetInfo inválida, informações do dispositivo obtidas apenas via descoberta",
+        "nl": "Ongeldige ES.GetInfo-aanroep verwijderd, apparaatinformatie alleen verkregen via discovery",
+        "fr": "Supprimé l'appel ES.GetInfo invalide, informations sur l'appareil obtenues uniquement via la découverte",
+        "it": "Rimossa chiamata ES.GetInfo non valida, informazioni sul dispositivo ottenute solo tramite discovery",
+        "es": "Eliminada llamada ES.GetInfo no válida, información del dispositivo obtenida solo a través de discovery",
+        "pl": "Usunięto nieprawidłowe wywołanie ES.GetInfo, informacje o urządzeniu uzyskiwane tylko poprzez odnajdywanie",
+        "uk": "Видалено недійсний виклик ES.GetInfo, інформація про пристрій отримується лише через виявлення",
+        "zh-cn": "移除了无效的 ES.GetInfo 调用，设备信息仅通过发现获取"
       },
       "0.1.1": {
         "en": "Added 3-tier polling system, request deduplication, automatic retry, optimized power updates",
-        "de": "3-stufiges Polling-System hinzugefügt, Anfrage-Deduplizierung, automatische Wiederholung, optimierte Leistungsaktualisierungen"
+        "de": "3-stufiges Polling-System hinzugefügt, Anfrage-Deduplizierung, automatische Wiederholung, optimierte Leistungsaktualisierungen",
+        "ru": "Добавлена 3-уровневая система опроса, дедупликация запросов, автоматический повтор, оптимизированные обновления мощности",
+        "pt": "Adicionado sistema de polling de 3 níveis, desduplicação de solicitações, repetição automática, atualizações de energia otimizadas",
+        "nl": "3-tier polling systeem toegevoegd, aanvraagdeduplicatie, automatische herhaal, geoptimaliseerde vermogensupdates",
+        "fr": "Ajouté un système de polling à 3 niveaux, déduplication des requêtes, retry automatique, mises à jour de puissance optimisées",
+        "it": "Aggiunto sistema di polling a 3 livelli, deduplicazione delle richieste, retry automatico, aggiornamenti di potenza ottimizzati",
+        "es": "Añadido sistema de polling de 3 niveles, deduplicación de solicitudes, reintento automático, actualizaciones de potencia optimizadas",
+        "pl": "Dodano 3-poziomowy system odpytywania, deduplikację żądań, automatyczne ponawianie, zoptymalizowane aktualizacje mocy",
+        "uk": "Додано 3-рівневу систему опитування, дедуплікацію запитів, автоматичне повторювання, оптимізовані оновлення потужності",
+        "zh-cn": "添加了3层轮询系统，请求去重，自动重试，优化了功率更新"
       },
       "0.1.0": {
         "en": "Initial release",
-        "de": "Erstveröffentlichung"
+        "de": "Erstveröffentlichung",
+        "ru": "Первоначальный выпуск",
+        "pt": "Versão inicial",
+        "nl": "Eerste release",
+        "fr": "Version initiale",
+        "it": "Release iniziale",
+        "es": "Lanzamiento inicial",
+        "pl": "Pierwsze wydanie",
+        "uk": "Початковий випуск",
+        "zh-cn": "初始版本"
       }
     },
     "icon": "marstek-venus.png",
@@ -39,10 +92,14 @@
     "authors": [
       "ioBroker Community"
     ],
-    "license": "MIT",
+    "licenseInformation": {
+      "license": "MIT",
+      "type": "permissive"
+    },
     "platform": "Javascript/Node.js",
     "mode": "daemon",
-    "materialize": true,
+    "compact": true,
+    "tier": 3,
     "supportedCompact": true,
     "noConfig": false,
     "noIntro": false,
