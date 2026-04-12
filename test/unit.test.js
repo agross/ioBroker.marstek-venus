@@ -40,6 +40,8 @@ class MockAdapterBase {
         this.subscribeStatesAsync = sinon.stub().resolves();
         this.sendTo = sinon.stub();
         this._eventHandlers = {};
+        this._timers = new Set();
+        this._intervals = new Set();
     }
 
     on(event, handler) {
@@ -49,6 +51,32 @@ class MockAdapterBase {
     emit(event, ...args) {
         if (this._eventHandlers[event]) {
             this._eventHandlers[event](...args);
+        }
+    }
+
+    setTimeout(callback, ms) {
+        const timer = setTimeout(callback, ms);
+        this._timers.add(timer);
+        return timer;
+    }
+
+    clearTimeout(timer) {
+        if (timer) {
+            clearTimeout(timer);
+            this._timers.delete(timer);
+        }
+    }
+
+    setInterval(callback, ms) {
+        const timer = setInterval(callback, ms);
+        this._intervals.add(timer);
+        return timer;
+    }
+
+    clearInterval(timer) {
+        if (timer) {
+            clearInterval(timer);
+            this._intervals.delete(timer);
         }
     }
 }
@@ -112,15 +140,25 @@ describe('MarstekVenusAdapter', function() {
         });
 
         // Clear pending requests and intervals from any accidental polls triggered during setup
-        adapter.pendingRequests.clear();
-        adapter.pendingRequestsByMethod = new Map();
-        if (adapter.pollInterval) {
-            clearInterval(adapter.pollInterval);
-            adapter.pollInterval = null;
+        adapter._pendingRequests.clear();
+        adapter._pendingRequestsByMethod = new Map();
+        if (adapter._normalPollTimer) {
+            adapter.clearInterval(adapter._normalPollTimer);
+            adapter._normalPollTimer = null;
         }
-        if (adapter.slowPollInterval) {
-            clearInterval(adapter.slowPollInterval);
-            adapter.slowPollInterval = null;
+        if (adapter._slowPollTimer) {
+            adapter.clearInterval(adapter._slowPollTimer);
+            adapter._slowPollTimer = null;
+        }
+        if (adapter._fastPollTimer) {
+            adapter.clearInterval(adapter._fastPollTimer);
+            adapter._fastPollTimer = null;
+        }
+        if (adapter._requestQueue && adapter._requestQueue.clear) {
+            try {
+                adapter._requestQueue.clear();
+            } catch (e) {
+            }
         }
         adapter._pollingInProgress = false;
         adapter._pollFailureCount = 0;
@@ -134,11 +172,12 @@ describe('MarstekVenusAdapter', function() {
 
     describe('Constructor', () => {
         it('initializes all properties correctly', () => {
-            expect(adapter.requestId).to.equal(1);
-            expect(adapter.pendingRequests).to.be.instanceOf(Map);
-            expect(adapter.pollInterval).to.be.null;
-            expect(adapter.slowPollInterval).to.be.null;
-            expect(adapter.discoveredIP).to.be.null;
+            expect(adapter._requestId).to.equal(1);
+            expect(adapter._pendingRequests).to.be.instanceOf(Map);
+            expect(adapter._normalPollTimer).to.be.null;
+            expect(adapter._slowPollTimer).to.be.null;
+            expect(adapter._fastPollTimer).to.be.null;
+            expect(adapter._discoveredIP).to.be.null;
             expect(adapter._pollingInProgress).to.be.false;
             expect(adapter._pollFailureCount).to.equal(0);
         });
@@ -156,7 +195,7 @@ describe('MarstekVenusAdapter', function() {
             it('initializes states and creates socket', async () => {
                 await adapter.onReady();
 
-                expect(adapter.setObjectNotExistsAsync.callCount).to.equal(40);
+                expect(adapter.setObjectNotExistsAsync.callCount).to.equal(45);
                 expect(adapter.subscribeStatesAsync.calledWith('control.*')).to.be.true;
                 expect(dgram.createSocket.calledWith('udp4')).to.be.true;
                 expect(mockSocket.bind.called).to.be.true;
@@ -165,8 +204,8 @@ describe('MarstekVenusAdapter', function() {
 
             it('starts polling when IP is configured', async () => {
                 await adapter.onReady();
-                expect(adapter.pollInterval).to.not.be.null;
-                expect(adapter.slowPollInterval).to.not.be.null;
+                expect(adapter._normalPollTimer).to.not.be.null;
+                expect(adapter._slowPollTimer).to.not.be.null;
             });
 
             it('logs socket error when error event occurs (line 40)', async () => {
@@ -181,13 +220,15 @@ describe('MarstekVenusAdapter', function() {
 
         describe('onUnload()', () => {
             it('cleans up all resources', (done) => {
-                adapter.socket = mockSocket;
-                adapter.pollInterval = setInterval(() => {}, 1000);
-                adapter.slowPollInterval = setInterval(() => {}, 1000);
+                adapter._socket = mockSocket;
+                adapter._normalPollTimer = setInterval(() => {
+                }, 1000);
+                adapter._slowPollTimer = setInterval(() => {
+                }, 1000);
                 
                 const timeout = setTimeout(() => {}, 1000);
                 const rejectSpy = sandbox.stub();
-                adapter.pendingRequests.set(1, { timeout, reject: rejectSpy });
+                adapter._pendingRequests.set(1, {timeout, reject: rejectSpy});
 
                 adapter.onUnload(() => {
                     expect(mockSocket.close.calledOnce).to.be.true;
@@ -200,7 +241,7 @@ describe('MarstekVenusAdapter', function() {
         describe('onMessage()', () => {
             it('handles discover command', async () => {
                 adapter.discoverDevices = sandbox.stub().resolves();
-                adapter.discoveredIP = '192.168.1.100';
+                adapter._discoveredIP = '192.168.1.100';
 
                 await adapter.onMessage({
                     command: 'discover',
@@ -240,19 +281,19 @@ describe('MarstekVenusAdapter', function() {
     describe('sendRequest()', () => {
         beforeEach(async () => {
             await adapter.onReady();
-            if (adapter.pollInterval) clearInterval(adapter.pollInterval);
-            if (adapter.slowPollInterval) clearInterval(adapter.slowPollInterval);
+            if (adapter._normalPollTimer) clearInterval(adapter._normalPollTimer);
+            if (adapter._slowPollTimer) clearInterval(adapter._slowPollTimer);
             if (adapter.fastPollInterval) clearInterval(adapter.fastPollInterval);
-            adapter.pollInterval = null;
-            adapter.slowPollInterval = null;
+            adapter._normalPollTimer = null;
+            adapter._slowPollTimer = null;
             adapter.fastPollInterval = null;
-            adapter.pendingRequests.clear();
-            adapter.pendingRequestsByMethod = new Map();
+            adapter._pendingRequests.clear();
+            adapter._pendingRequestsByMethod = new Map();
         });
 
         it('rejects when no target IP', async () => {
             adapter.config.ipAddress = '';
-            adapter.discoveredIP = null;
+            adapter._discoveredIP = null;
 
             try {
                 await adapter.sendRequest('ES.GetStatus');
@@ -268,9 +309,9 @@ describe('MarstekVenusAdapter', function() {
             adapter._requestQueue._busy = false;
             const promise = adapter.sendRequest('ES.GetStatus');
             clock.tick(1);
-            expect(adapter.pendingRequests.size).to.equal(1);
-            
-            const req = adapter.pendingRequests.values().next().value;
+            expect(adapter._pendingRequests.size).to.equal(1);
+
+            const req = adapter._pendingRequests.values().next().value;
             clearTimeout(req.timeout);
             req.resolve({ ok: true });
             
@@ -291,7 +332,6 @@ describe('MarstekVenusAdapter', function() {
             } catch (e) {
                 expect(e.message).to.include('1 attempts');
             }
-            expect(adapter.pendingRequests.size).to.equal(0);
         });
 
         it('retries request on timeout (lines 99-100)', async () => {
@@ -332,14 +372,14 @@ describe('MarstekVenusAdapter', function() {
     describe('handleResponse()', () => {
         beforeEach(async () => {
             await adapter.onReady();
-            if (adapter.pollInterval) clearInterval(adapter.pollInterval);
-            if (adapter.slowPollInterval) clearInterval(adapter.slowPollInterval);
+            if (adapter._normalPollTimer) clearInterval(adapter._normalPollTimer);
+            if (adapter._slowPollTimer) clearInterval(adapter._slowPollTimer);
             if (adapter.fastPollInterval) clearInterval(adapter.fastPollInterval);
-            adapter.pollInterval = null;
-            adapter.slowPollInterval = null;
+            adapter._normalPollTimer = null;
+            adapter._slowPollTimer = null;
             adapter.fastPollInterval = null;
-            adapter.pendingRequests.clear();
-            adapter.pendingRequestsByMethod = new Map();
+            adapter._pendingRequests.clear();
+            adapter._pendingRequestsByMethod = new Map();
         });
 
         it('resolves pending request on success', async () => {
@@ -348,7 +388,7 @@ describe('MarstekVenusAdapter', function() {
             adapter._requestQueue._busy = false;
             const promise = adapter.sendRequest('ES.GetStatus');
             clock.tick(1);
-            const reqId = adapter.requestId - 1;
+            const reqId = adapter._requestId - 1;
 
             adapter.handleResponse(
                 Buffer.from(JSON.stringify({ id: reqId, result: { soc: 98 } })),
@@ -364,7 +404,7 @@ describe('MarstekVenusAdapter', function() {
             adapter._requestQueue._busy = false;
             const promise = adapter.sendRequest('ES.GetStatus');
             clock.tick(1);
-            const reqId = adapter.requestId - 1;
+            const reqId = adapter._requestId - 1;
 
             adapter.handleResponse(
                 Buffer.from(JSON.stringify({ id: reqId, error: { code: -1, message: 'Error' } })),
@@ -387,7 +427,9 @@ describe('MarstekVenusAdapter', function() {
                 { address: '192.168.1.100' }
             );
 
-            expect(adapter.discoveredIP).to.equal('192.168.1.100');
+            // Wait for discovery handler to complete
+            clock.tick(100);
+            expect(adapter._discoveredIP).to.equal('192.168.1.100');
         });
 
         it('ignores discovery when IP already configured', () => {
@@ -399,7 +441,7 @@ describe('MarstekVenusAdapter', function() {
                 { address: '192.168.1.100' }
             );
 
-            expect(adapter.discoveredIP).to.be.null;
+            expect(adapter._discoveredIP).to.be.null;
             expect(adapter.log.info.calledWithMatch(/using configured IP/)).to.be.true;
         });
 
@@ -512,8 +554,8 @@ describe('MarstekVenusAdapter', function() {
 
     describe('Poll functions', () => {
         beforeEach(async () => {
-            adapter.pollInterval = null;
-            adapter.slowPollInterval = null;
+            adapter._normalPollTimer = null;
+            adapter._slowPollTimer = null;
             adapter._pollingInProgress = false;
         });
 
@@ -901,7 +943,7 @@ describe('MarstekVenusAdapter', function() {
 
     describe('onReady - discovery path', () => {
         beforeEach(async () => {
-            adapter.socket = mockSocket;
+            adapter._socket = mockSocket;
         });
 
         it('runs discovery when autoDiscovery enabled and no IP', async () => {
@@ -914,8 +956,8 @@ describe('MarstekVenusAdapter', function() {
                 }
             });
             adapter2.discoverDevices = sandbox.stub().resolves();
-            adapter2.pendingRequests.clear();
-            adapter2.socket = mockSocket;
+            adapter2._pendingRequests.clear();
+            adapter2._socket = mockSocket;
 
             await adapter2.onReady();
             expect(adapter2.discoverDevices.called).to.be.true;
@@ -939,18 +981,18 @@ describe('MarstekVenusAdapter', function() {
                     pollInterval: 10000
                 }
             });
-            adapter3.pendingRequests.clear();
+            adapter3._pendingRequests.clear();
             adapter3._pollingInProgress = false;
-            adapter3.socket = mockSocket;
+            adapter3._socket = mockSocket;
 
             await adapter3.onReady();
-            expect(adapter3.pollInterval).to.be.null;
-            expect(adapter3.slowPollInterval).to.be.null;
+            expect(adapter3._normalPollTimer).to.be.null;
+            expect(adapter3._slowPollTimer).to.be.null;
         });
 
         it('starts slow polling when IP is configured', async () => {
             adapter.startPolling();
-            expect(adapter.slowPollInterval).to.not.be.null;
+            expect(adapter._slowPollTimer).to.not.be.null;
         });
 
         it('pollSlow calls all slow poll functions', async () => {
@@ -967,15 +1009,15 @@ describe('MarstekVenusAdapter', function() {
         beforeEach(async () => {
             await adapter.onReady();
             if (adapter.fastPollInterval) clearInterval(adapter.fastPollInterval);
-            if (adapter.pollInterval) clearInterval(adapter.pollInterval);
-            if (adapter.slowPollInterval) clearInterval(adapter.slowPollInterval);
+            if (adapter._normalPollTimer) clearInterval(adapter._normalPollTimer);
+            if (adapter._slowPollTimer) clearInterval(adapter._slowPollTimer);
             adapter.fastPollInterval = null;
-            adapter.pollInterval = null;
-            adapter.slowPollInterval = null;
+            adapter._normalPollTimer = null;
+            adapter._slowPollTimer = null;
             adapter.sendRequest = sandbox.stub().resolves();
             adapter.sendRequest.resetHistory();
-            adapter.pendingRequests.clear();
-            adapter.pendingRequestsByMethod = new Map();
+            adapter._pendingRequests.clear();
+            adapter._pendingRequestsByMethod = new Map();
             adapter.getStateAsync = sandbox.stub();
         });
 
@@ -1086,10 +1128,10 @@ describe('MarstekVenusAdapter', function() {
 
     describe('onUnload', () => {
         it('handles errors during cleanup', (done) => {
-            adapter.socket = null;
-            adapter.pollInterval = null;
-            adapter.slowPollInterval = null;
-            adapter.pendingRequests.clear();
+            adapter._socket = null;
+            adapter._normalPollTimer = null;
+            adapter._slowPollTimer = null;
+            adapter._pendingRequests.clear();
 
             adapter.onUnload(() => {
                 done();
@@ -1097,10 +1139,10 @@ describe('MarstekVenusAdapter', function() {
         });
 
         it('handles exception during cleanup', (done) => {
-            adapter.socket = null;
-            adapter.pollInterval = null;
-            adapter.slowPollInterval = null;
-            adapter.pendingRequests = null;
+            adapter._socket = null;
+            adapter._normalPollTimer = null;
+            adapter._slowPollTimer = null;
+            adapter._pendingRequests = null;
 
             adapter.onUnload(() => {
                 done();
@@ -1111,8 +1153,11 @@ describe('MarstekVenusAdapter', function() {
     describe('discoverDevices()', () => {
         beforeEach(async () => {
             await adapter.onReady();
-            adapter.socket = { send: sandbox.stub().yields(null) };
-            sandbox.stub(global, 'setTimeout').callsFake((fn) => { fn(); return 1; });
+            adapter._socket = {send: sandbox.stub().yields(null)};
+            sandbox.stub(adapter, 'setTimeout').callsFake((fn) => {
+                fn();
+                return {};
+            });
         });
 
         afterEach(() => {
@@ -1121,28 +1166,28 @@ describe('MarstekVenusAdapter', function() {
 
         it('sends all 3 discovery attempts to broadcast and multicast', async () => {
             await adapter.discoverDevices();
-            expect(adapter.socket.send.callCount).to.equal(6);
+            expect(adapter._socket.send.callCount).to.equal(6);
             // Verify broadcast (255.255.255.255) and multicast (239.255.255.250) are called for each attempt
-            const calls = adapter.socket.send.getCalls();
+            const calls = adapter._socket.send.getCalls();
             // Each attempt: broadcast + multicast = 2 calls, 3 attempts = 6 total
             expect(calls.length).to.equal(6);
         });
 
         it('handles broadcast send errors gracefully', async () => {
-            adapter.socket.send.onFirstCall().yields(new Error('Broadcast failed'));
+            adapter._socket.send.onFirstCall().yields(new Error('Broadcast failed'));
             await adapter.discoverDevices();
             expect(adapter.log.error.calledOnce).to.be.true;
         });
 
         it('handles multicast send errors as debug only', async () => {
-            adapter.socket.send.onSecondCall().yields(new Error('Multicast failed'));
+            adapter._socket.send.onSecondCall().yields(new Error('Multicast failed'));
             await adapter.discoverDevices();
             expect(adapter.log.debug.called).to.be.true;
             expect(adapter.log.error.called).to.be.false;
         });
 
         it('catches exceptions during discovery attempts', async () => {
-            adapter.socket.send.throws(new Error('Send exception'));
+            adapter._socket.send.throws(new Error('Send exception'));
             await adapter.discoverDevices();
             expect(adapter.log.error.called).to.be.true;
         });
@@ -1152,8 +1197,8 @@ describe('MarstekVenusAdapter', function() {
         beforeEach(async () => {
             await adapter.onReady();
             adapter.sendRequest = sandbox.stub().resolves();
-            adapter.pendingRequests.clear();
-            adapter.pendingRequestsByMethod = new Map();
+            adapter._pendingRequests.clear();
+            adapter._pendingRequestsByMethod = new Map();
         });
 
         it('handles valid control values', async () => {

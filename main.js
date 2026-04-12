@@ -11,15 +11,15 @@ class MarstekVenusAdapter extends utils.Adapter {
             name: 'marstek-venus',
         });
 
-        this.socket = null;
-        this.requestId = 1;
-        this.pendingRequests = new Map();
-        this.pendingRequestsByMethod = new Map();
+        this._socket = null;
+        this._requestId = 1;
+        this._pendingRequests = new Map();
+        this._pendingRequestsByMethod = new Map();
         this._requestQueue = null;
-        this.pollInterval = null;
-        this.slowPollInterval = null;
-        this.fastPollInterval = null;
-        this.discoveredIP = null;
+        this._normalPollTimer = null;
+        this._slowPollTimer = null;
+        this._fastPollTimer = null;
+        this._discoveredIP = null;
         this._pollingInProgress = false;
         this._pollFailureCount = 0;
 
@@ -34,17 +34,17 @@ class MarstekVenusAdapter extends utils.Adapter {
 
         await this.initStates();
 
-        this.socket = dgram.createSocket('udp4');
+        this._socket = dgram.createSocket('udp4');
 
-        this.socket.on('error', (err) => {
+        this._socket.on('error', (err) => {
             this.log.error(`UDP socket error: ${err.message}`);
         });
 
-        this.socket.on('message', this.handleResponse.bind(this));
+        this._socket.on('message', this.handleResponse.bind(this));
 
-        this.socket.bind(0, () => {
-            this.socket.setBroadcast(true);
-            const address = this.socket.address();
+        this._socket.bind(0, () => {
+            this._socket.setBroadcast(true);
+            const address = this._socket.address();
             this.log.debug(`UDP socket bound successfully to ${address.address}:${address.port}`);
 
             this._requestQueue = new RateLimitQueue({ intervalMs: 250 });
@@ -66,33 +66,33 @@ class MarstekVenusAdapter extends utils.Adapter {
             throw new Error('Request queue not initialized');
         }
 
-        const targetIP = this.discoveredIP || this.config.ipAddress;
+        const targetIP = this._discoveredIP || this.config.ipAddress;
 
         if (!targetIP) {
             this.log.error(`sendRequest ${method}: No target IP configured`);
             throw new Error(`No target IP configured`);
         }
 
-        this.pendingRequestsByMethod = this.pendingRequestsByMethod || new Map();
+        this._pendingRequestsByMethod = this._pendingRequestsByMethod || new Map();
 
         const PLACEHOLDER = Symbol('pending');
 
-        const existing = this.pendingRequestsByMethod.get(method);
+        const existing = this._pendingRequestsByMethod.get(method);
         if (existing === PLACEHOLDER) {
             return new Promise((resolve, reject) => {
                 let attempts = 0;
-                const checkInterval = setInterval(() => {
-                    const updated = this.pendingRequestsByMethod.get(method);
+                const checkInterval = this.setInterval(() => {
+                    const updated = this._pendingRequestsByMethod.get(method);
                     if (updated && updated !== PLACEHOLDER) {
-                        clearInterval(checkInterval);
+                        this.clearInterval(checkInterval);
                         resolve(updated);
-                    } else if (!this.pendingRequestsByMethod.has(method)) {
-                        clearInterval(checkInterval);
+                    } else if (!this._pendingRequestsByMethod.has(method)) {
+                        this.clearInterval(checkInterval);
                         reject(new Error(`Request ${method} failed before completion`));
                     }
                     attempts++;
                     if (attempts > 500) {
-                        clearInterval(checkInterval);
+                        this.clearInterval(checkInterval);
                         reject(new Error(`Request ${method} wait timeout`));
                     }
                 }, 20);
@@ -104,11 +104,11 @@ class MarstekVenusAdapter extends utils.Adapter {
             return existing;
         }
 
-        this.pendingRequestsByMethod.set(method, PLACEHOLDER);
+        this._pendingRequestsByMethod.set(method, PLACEHOLDER);
 
         const maxRetries = this.config.maxRetries || 1;
         const timeoutMs = this.config.requestTimeout || 2000;
-        const id = this.requestId++;
+        const id = this._requestId++;
         const request = { id, method, params };
         const message = Buffer.from(JSON.stringify(request));
 
@@ -116,8 +116,8 @@ class MarstekVenusAdapter extends utils.Adapter {
             let retryCount = 0;
 
             const sendOnce = () => {
-                const timeout = setTimeout(() => {
-                    const pending = this.pendingRequests.get(id);
+                const timeout = this.setTimeout(() => {
+                    const pending = this._pendingRequests.get(id);
                     if (!pending) return;
 
                     retryCount++;
@@ -125,21 +125,21 @@ class MarstekVenusAdapter extends utils.Adapter {
                         this.log.debug(`Retry ${retryCount}/${maxRetries} for ${method}`);
                         sendOnce();
                     } else {
-                        this.pendingRequests.delete(id);
-                        this.pendingRequestsByMethod.delete(method);
+                        this._pendingRequests.delete(id);
+                        this._pendingRequestsByMethod.delete(method);
                         this.log.warn(`sendRequest ${method} failed after ${maxRetries} attempts`);
                         reject(new Error(`Request ${method} timed out after ${maxRetries} attempts`));
                     }
                 }, timeoutMs);
 
-                this.pendingRequests.set(id, { resolve, reject, timeout, method });
+                this._pendingRequests.set(id, {resolve, reject, timeout, method});
 
                 this.log.debug(`Sending ${method} to ${targetIP}:${this.config.udpPort} (attempt ${retryCount + 1}/${maxRetries})`);
-                this.socket.send(message, 0, message.length, this.config.udpPort, targetIP, (err) => {
+                this._socket.send(message, 0, message.length, this.config.udpPort, targetIP, (err) => {
                     if (err) {
-                        clearTimeout(timeout);
-                        this.pendingRequests.delete(id);
-                        this.pendingRequestsByMethod.delete(method);
+                        this.clearTimeout(timeout);
+                        this._pendingRequests.delete(id);
+                        this._pendingRequestsByMethod.delete(method);
                         this.log.error(`sendRequest ${method} to ${targetIP} send error: ${err.message}`);
                         reject(err);
                     }
@@ -149,7 +149,7 @@ class MarstekVenusAdapter extends utils.Adapter {
             sendOnce();
         }));
 
-        this.pendingRequestsByMethod.set(method, promise);
+        this._pendingRequestsByMethod.set(method, promise);
         return promise;
     }
 
@@ -158,12 +158,12 @@ class MarstekVenusAdapter extends utils.Adapter {
             const response = JSON.parse(msgBuffer.toString());
             this.log.debug(`Received response from ${rinfo.address}:${rinfo.port}: ${JSON.stringify(response)}`);
 
-            if (response.id !== undefined && this.pendingRequests.has(response.id)) {
-                const pending = this.pendingRequests.get(response.id);
-                clearTimeout(pending.timeout);
-                this.pendingRequests.delete(response.id);
+            if (response.id !== undefined && this._pendingRequests.has(response.id)) {
+                const pending = this._pendingRequests.get(response.id);
+                this.clearTimeout(pending.timeout);
+                this._pendingRequests.delete(response.id);
                 if (pending.method) {
-                    this.pendingRequestsByMethod?.delete(pending.method);
+                    this._pendingRequestsByMethod?.delete(pending.method);
                 }
 
                 if (response.error) {
@@ -183,8 +183,8 @@ class MarstekVenusAdapter extends utils.Adapter {
 
                 if (response.result && response.result.ip) {
                     if (!this.config.ipAddress) {
-                        this.discoveredIP = response.result.ip;
-                        this.log.info(`Auto-selecting discovered device: ${this.discoveredIP}`);
+                        this._discoveredIP = response.result.ip;
+                        this.log.info(`Auto-selecting discovered device: ${this._discoveredIP}`);
                         this.startPolling();
                         this.setStateAsync('info.device', { val: response.result.device, ack: true });
                         this.setStateAsync('info.firmware', { val: response.result.ver, ack: true });
@@ -207,13 +207,21 @@ class MarstekVenusAdapter extends utils.Adapter {
 
     startFastPolling() {
         this.log.info(`Starting fast polling loop (every ${this.config.fastPollInterval || 1000}ms)`);
-        this.fastPollInterval = setInterval(() => this.pollPower(), this.config.fastPollInterval || 1000);
+        if (this._fastPollTimer) {
+            this.clearInterval(this._fastPollTimer);
+            this._fastPollTimer = null;
+        }
+        this._fastPollTimer = this.setInterval(() => this.pollPower(), this.config.fastPollInterval || 1000);
         this.pollPower();
     }
 
     startPolling() {
         this.log.info('Starting polling loop');
-        this.pollInterval = setInterval(() => this.poll(), this.config.pollInterval || 10000);
+        if (this._normalPollTimer) {
+            this.clearInterval(this._normalPollTimer);
+            this._normalPollTimer = null;
+        }
+        this._normalPollTimer = this.setInterval(() => this.poll(), this.config.pollInterval || 10000);
         this.startFastPolling();
         this.startSlowPolling();
         this.poll();
@@ -221,7 +229,11 @@ class MarstekVenusAdapter extends utils.Adapter {
 
     startSlowPolling() {
         this.log.info('Starting slow polling loop (info + network every 10 min)');
-        this.slowPollInterval = setInterval(() => this.pollSlow(), 600000);
+        if (this._slowPollTimer) {
+            this.clearInterval(this._slowPollTimer);
+            this._slowPollTimer = null;
+        }
+        this._slowPollTimer = this.setInterval(() => this.pollSlow(), 600000);
         this.pollSlow();
     }
 
@@ -229,8 +241,8 @@ class MarstekVenusAdapter extends utils.Adapter {
         if (obj.command === 'discover') {
             await this.discoverDevices();
             if (obj.callback) this.sendTo(obj.from, obj.command, {
-                success: !!this.discoveredIP,
-                ipAddress: this.discoveredIP || null
+                success: !!this._discoveredIP,
+                ipAddress: this._discoveredIP || null
             }, obj.callback);
         } else if (obj.command === 'setSettings') {
             const settings = obj.values;
@@ -272,16 +284,25 @@ class MarstekVenusAdapter extends utils.Adapter {
         try {
             this.log.info('Shutting down Marstek Venus adapter');
 
-            if (this.pollInterval) clearInterval(this.pollInterval);
-            if (this.slowPollInterval) clearInterval(this.slowPollInterval);
-            if (this.fastPollInterval) clearInterval(this.fastPollInterval);
+            if (this._normalPollTimer) {
+                this.clearInterval(this._normalPollTimer);
+                this._normalPollTimer = null;
+            }
+            if (this._slowPollTimer) {
+                this.clearInterval(this._slowPollTimer);
+                this._slowPollTimer = null;
+            }
+            if (this._fastPollTimer) {
+                this.clearInterval(this._fastPollTimer);
+                this._fastPollTimer = null;
+            }
             if (this._requestQueue) this._requestQueue.clear();
-            if (this.socket) this.socket.close();
+            if (this._socket) this._socket.close();
 
-            for (const [id, pending] of this.pendingRequests) {
-                clearTimeout(pending.timeout);
+            for (const [id, pending] of this._pendingRequests) {
+                this.clearTimeout(pending.timeout);
                 pending.reject(new Error('Adapter shutting down'));
-                this.pendingRequests.delete(id);
+                this._pendingRequests.delete(id);
             }
 
             callback();
