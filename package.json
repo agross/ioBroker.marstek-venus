@@ -2,9 +2,7 @@
   "name": "iobroker.marstek-venus",
   "version": "0.1.9",
   "description": "ioBroker adapter for Marstek Venus C/D/E energy storage devices",
-  "author": {
-    "name": "ioBroker Community"
-  },
+  "author": "ioBroker Community",
   "homepage": "https://github.com/Slugger2k/ioBroker.marstek-venus",
   "license": "MIT",
   "keywords": [
