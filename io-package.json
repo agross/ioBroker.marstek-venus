@@ -33,7 +33,7 @@
       }
     },
     "icon": "marstek-venus.png",
-    "extIcon": "https://raw.githubusercontent.com/Slugger2k/ioBroker.marstek_venus/master/admin/marstek-venus.png",
+    "extIcon": "https://raw.githubusercontent.com/Slugger2k/ioBroker.marstek-venus/master/admin/marstek-venus.png",
     "type": "energy",
     "authors": [
       "ioBroker Community"
@@ -67,9 +67,9 @@
     "supportedMessages": [
       "sendTo"
     ],
-    "readme": "https://github.com/Slugger2k/ioBroker.marstek_venus#readme",
-    "bugs": "https://github.com/Slugger2k/ioBroker.marstek_venus/issues",
-    "changelog": "https://github.com/Slugger2k/ioBroker.marstek_venus/blob/master/CHANGELOG.md"
+    "readme": "https://github.com/Slugger2k/ioBroker.marstek-venus#readme",
+    "bugs": "https://github.com/Slugger2k/ioBroker.marstek-venus/issues",
+    "changelog": "https://github.com/Slugger2k/ioBroker.marstek-venus/blob/master/CHANGELOG.md"
   },
   "native": {
     "ipAddress": "",
