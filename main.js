@@ -355,7 +355,7 @@ class MarstekVenusAdapter extends utils.Adapter {
 				this._fastPollTimer = null;
 			}
 			if (this._requestQueue) {
-				this._requestQueue.clear();
+				this._requestQueue.clear(this);
 			}
 			if (this._socket) {
 				this._socket.close();
