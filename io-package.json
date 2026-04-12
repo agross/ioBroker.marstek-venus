@@ -29,7 +29,8 @@
         "de": "3-stufiges Polling-System hinzugefügt, Anfrage-Deduplizierung, automatische Wiederholung, optimierte Leistungsaktualisierungen"
       },
       "0.1.0": {
-        "en": "Initial release"
+        "en": "Initial release",
+        "de": "Erstveröffentlichung"
       }
     },
     "icon": "marstek-venus.png",
