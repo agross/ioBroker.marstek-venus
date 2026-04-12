@@ -296,17 +296,17 @@ class MarstekVenusAdapter extends utils.Adapter {
 			}
 		} else if (obj.command === "setSettings") {
 			const settings = obj.values;
-			this.config.autoDiscovery = settings.autoDiscovery;
-			this.config.ipAddress = settings.ipAddress;
-			this.config.udpPort = settings.udpPort;
-			this.config.pollInterval = settings.pollInterval;
+			this.config.autoDiscovery = !!settings.autoDiscovery;
+			this.config.ipAddress = typeof settings.ipAddress === 'string' ? settings.ipAddress.trim() : '';
+			this.config.udpPort = Math.max(1, Math.min(65535, parseInt(settings.udpPort, 10) || 30000));
+			this.config.pollInterval = Math.max(500, Math.min(60000, parseInt(settings.pollInterval, 10) || 20000));
 
 			await this.extendForeignObjectAsync(`system.adapter.${this.namespace}`, {
 				native: {
-					autoDiscovery: settings.autoDiscovery,
-					ipAddress: settings.ipAddress,
-					udpPort: settings.udpPort,
-					pollInterval: settings.pollInterval,
+					autoDiscovery: this.config.autoDiscovery,
+					ipAddress: this.config.ipAddress,
+					udpPort: this.config.udpPort,
+					pollInterval: this.config.pollInterval,
 				},
 			});
 
