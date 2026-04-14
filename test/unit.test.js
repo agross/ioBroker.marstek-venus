@@ -33,7 +33,7 @@ class MockAdapterBase {
 			warn: sinon.stub(),
 			error: sinon.stub(),
 		};
-		this.setStateAsync = sinon.stub().resolves();
+		this.setState = sinon.stub().resolves();
 		this.setStateChangedAsync = sinon.stub().resolves();
 		this.setObject = sinon.stub().resolves();
 		this.extendForeignObjectAsync = sinon.stub().resolves();
@@ -265,14 +265,14 @@ describe("MarstekVenusAdapter", function () {
 						autoDiscovery: true,
 						ipAddress: "192.168.1.100",
 						udpPort: 30001,
-						pollInterval: 5000,
+						pollInterval: 30000,
 					},
 				});
 
 				expect(adapter.config.autoDiscovery).to.be.true;
 				expect(adapter.config.ipAddress).to.equal("192.168.1.100");
 				expect(adapter.config.udpPort).to.equal(30001);
-				expect(adapter.config.pollInterval).to.equal(5000);
+				expect(adapter.config.pollInterval).to.equal(30000);
 				expect(adapter.log.info.calledWith("Settings saved and persisted")).to.be.true;
 			});
 		});
@@ -602,7 +602,7 @@ describe("MarstekVenusAdapter", function () {
 			adapter.pollModeStatus = sandbox.stub().resolves();
 
 			await adapter.poll();
-			expect(adapter.setStateAsync.calledWith("info.connection", { val: true, ack: true })).to.be.true;
+			expect(adapter.setState.calledWith("info.connection", { val: true, ack: true })).to.be.true;
 			expect(adapter._pollFailureCount).to.equal(0);
 		});
 
@@ -626,7 +626,7 @@ describe("MarstekVenusAdapter", function () {
 			expect(adapter._pollFailureCount).to.equal(2);
 			await adapter.poll();
 			expect(adapter._pollFailureCount).to.equal(3);
-			expect(adapter.setStateAsync.calledWith("info.connection", { val: false, ack: true })).to.be.true;
+			expect(adapter.setState.calledWith("info.connection", { val: false, ack: true })).to.be.true;
 		});
 
 		it("handles pollWithRetry returning false", async () => {
@@ -647,7 +647,7 @@ describe("MarstekVenusAdapter", function () {
 			});
 
 			await adapter.poll();
-			expect(adapter.setStateAsync.calledWith("info.connection", { val: false, ack: true })).to.be.false;
+			expect(adapter.setState.calledWith("info.connection", { val: false, ack: true })).to.be.false;
 			expect(adapter._pollFailureCount).to.equal(1);
 		});
 
@@ -663,15 +663,15 @@ describe("MarstekVenusAdapter", function () {
 
 			await adapter.poll();
 			expect(adapter._pollFailureCount).to.equal(1);
-			expect(adapter.setStateAsync.calledWith("info.connection", { val: false, ack: true })).to.be.false;
+			expect(adapter.setState.calledWith("info.connection", { val: false, ack: true })).to.be.false;
 
 			await adapter.poll();
 			expect(adapter._pollFailureCount).to.equal(2);
-			expect(adapter.setStateAsync.calledWith("info.connection", { val: false, ack: true })).to.be.false;
+			expect(adapter.setState.calledWith("info.connection", { val: false, ack: true })).to.be.false;
 
 			await adapter.poll();
 			expect(adapter._pollFailureCount).to.equal(3);
-			expect(adapter.setStateAsync.calledWith("info.connection", { val: false, ack: true })).to.be.true;
+			expect(adapter.setState.calledWith("info.connection", { val: false, ack: true })).to.be.true;
 		});
 
 		it("resets failure count on successful poll after failures", async () => {
@@ -704,7 +704,7 @@ describe("MarstekVenusAdapter", function () {
 
 			await adapter.poll();
 			expect(adapter._pollFailureCount).to.equal(0);
-			expect(adapter.setStateAsync.calledWith("info.connection", { val: true, ack: true })).to.be.true;
+			expect(adapter.setState.calledWith("info.connection", { val: true, ack: true })).to.be.true;
 		});
 
 		it("skips overlapping polls", async () => {
@@ -758,6 +758,93 @@ describe("MarstekVenusAdapter", function () {
 
 			const result = await adapter.pollWithRetry(() => adapter.pollESStatus());
 			expect(result).to.be.true;
+		});
+	});
+
+	describe("Device model filtering", () => {
+		beforeEach(async () => {
+			adapter._normalPollTimer = null;
+			adapter._slowPollTimer = null;
+			adapter._pollingInProgress = false;
+			adapter._discoveredDeviceModel = null;
+		});
+
+		it("hasPVSupport returns true for VenusD", () => {
+			adapter._discoveredDeviceModel = "VenusD";
+			expect(adapter.hasPVSupport()).to.be.true;
+		});
+
+		it("hasPVSupport returns true for VenusA", () => {
+			adapter._discoveredDeviceModel = "VenusA";
+			expect(adapter.hasPVSupport()).to.be.true;
+		});
+
+		it("hasPVSupport returns false for VenusE", () => {
+			adapter._discoveredDeviceModel = "VenusE";
+			expect(adapter.hasPVSupport()).to.be.false;
+		});
+
+		it("hasPVSupport returns false for VenusC", () => {
+			adapter._discoveredDeviceModel = "VenusC";
+			expect(adapter.hasPVSupport()).to.be.false;
+		});
+
+		it("hasPVSupport returns true when no device model known", () => {
+			adapter._discoveredDeviceModel = null;
+			expect(adapter.hasPVSupport()).to.be.true;
+		});
+
+		it("skips PV polling for VenusE device", async () => {
+			adapter._discoveredDeviceModel = "VenusE";
+			adapter.pollESStatus = sandbox.stub().resolves();
+			adapter.pollBatteryStatus = sandbox.stub().resolves();
+			adapter.pollEMStatus = sandbox.stub().resolves();
+			adapter.pollModeStatus = sandbox.stub().resolves();
+			adapter.pollPVStatus = sandbox.stub().resolves();
+
+			await adapter.poll();
+
+			expect(adapter.pollPVStatus.called).to.be.false;
+			expect(adapter.pollESStatus.called).to.be.true;
+			expect(adapter.pollBatteryStatus.called).to.be.true;
+			expect(adapter.pollEMStatus.called).to.be.true;
+			expect(adapter.pollModeStatus.called).to.be.true;
+		});
+
+		it("calls PV polling for VenusD device", async () => {
+			adapter._discoveredDeviceModel = "VenusD";
+			adapter.pollESStatus = sandbox.stub().resolves();
+			adapter.pollBatteryStatus = sandbox.stub().resolves();
+			adapter.pollEMStatus = sandbox.stub().resolves();
+			adapter.pollModeStatus = sandbox.stub().resolves();
+			adapter.pollPVStatus = sandbox.stub().resolves();
+
+			await adapter.poll();
+
+			expect(adapter.pollPVStatus.called).to.be.true;
+			expect(adapter.pollESStatus.called).to.be.true;
+		});
+
+		it("updates device model from discovery response", () => {
+			adapter._discoveredIP = null;
+			adapter._discoveredDeviceModel = null;
+			adapter.config = { autoDiscovery: true, ipAddress: "" };
+
+			const discoveryResponse = {
+				id: 0,
+				src: "VenusE-24215ee580e7",
+				result: {
+					device: "VenusE",
+					ver: 111,
+					ble_mac: "24215ee580e7",
+					wifi_mac: "24215ee580e7",
+					ip: "192.168.177.55",
+				},
+			};
+
+			adapter.handleResponse(JSON.stringify(discoveryResponse), { address: "192.168.177.55", port: 30000 });
+
+			expect(adapter._discoveredDeviceModel).to.equal("VenusE");
 		});
 	});
 
