@@ -240,11 +240,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ## Changelog
-### **WORK IN PROGRESS**
+### 0.1.15 (2026-04-19)
 - refactor: replace fragile mixin pattern 
 - refactor: replace busy-wait polling loop in sendRequest() with direct promise chain reuse
 - fix: PLACEHOLDER Symbol comparison - now defined once at module level instead of per-call
-- refactor: centralize poll interval magic numbers 
+- refactor: centralize poll interval magic numbers
 
 ### 0.1.14 (2026-04-14)
 - Fixed: VenusE/VenusC devices failing polls with "Method not found" errors by skipping PV polling for models that don't support PV component (per API documentation, only Venus D/A have PV support)

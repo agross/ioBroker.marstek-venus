@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "marstek-venus",
-    "version": "0.1.14",
+    "version": "0.1.15",
     "titleLang": {
       "en": "Marstek Venus Energy Storage",
       "de": "Marstek Venus Energiespeicher",
@@ -29,6 +29,19 @@
       "zh-cn": "Marstek Venus A/C/D/E 储能设备适配器"
     },
     "news": {
+      "0.1.15": {
+        "en": "refactor: replace fragile mixin pattern \nrefactor: replace busy-wait polling loop in sendRequest() with direct promise chain reuse\nfix: PLACEHOLDER Symbol comparison - now defined once at module level instead of per-call\nrefactor: centralize poll interval magic numbers",
+        "de": "refactor: fragiles mischmuster ersetzen\nrefactor: ersetzen Sie die befahrene Umfrageschleife in sendRequest() durch direkte Versprechungskette Wiederverwendung\nfix: PLACEHOLDER Symbol-Vergleich - jetzt einmal auf Modulebene anstatt per-Call definiert\nrefactor: zentralisieren sie umfrageintervall magische zahlen",
+        "ru": "рефактор: замена хрупкой структуры смеси\nrefactor: замените цикл опросов в sendRequest() с прямым повторным использованием цепочки обещаний\nисполнитель: PlacehoLDer Сравнение символов - теперь определяется один раз на уровне модуля вместо одного вызова\nрефактор: централизовать интервал опроса магических чисел",
+        "pt": "refator: substituir o padrão de mistura frágil\nrefator: substitua o loop de votação de espera ocupada no sendRequest() com reuso direto da cadeia de promessa\nfixação: LOCALIZADOR Comparação de símbolos - agora definida uma vez no nível do módulo em vez de por chamada\nrefator: centralizar números mágicos de intervalo de pesquisa",
+        "nl": "refactor: vervang fragiel mengpatroon\nrefactor: vervang drukke wacht polling lus in sendRequest() met directe belofte ketting hergebruik\nfix: PLACEHOLDER Symboolvergelijking - nu eenmaal gedefinieerd op moduleniveau in plaats van per oproep\nrefactor: centraliseren poll interval magische getallen",
+        "fr": "refactor: remplacer le motif de mélange fragile\nrefactor: remplacer la boucle de vote en attente dans sendRequest() par une réutilisation directe de la chaîne de promesses\ncorrection : PLACE-OLDER Comparaison des symboles - désormais défini une fois au niveau du module au lieu de l'appel\nrefactor: centraliser les nombres magiques de l'intervalle de sondage",
+        "it": "refactor: sostituire fragile mixin pattern\nrefactor: Sostituire il loop inquinante in sendRequest() con il riutilizzo diretto della catena promettente\ncorrezione: PLACEHOLDER Confronto simbolico - ora definito una volta a livello modulo invece di per-call\nrefactor: centralizzare i numeri magici dell'intervallo di poll",
+        "es": "refactor: reemplazar el patrón de mezcla frágil\nrefactor: reemplazar el bucle de votación de espera ocupada en sendRequest() con la reutilización de cadena de promesa directa\nfijación: PLACEHOLDER Comparación de símbolos - ahora definida una vez a nivel de módulos en lugar de por llamada\nrefactor: centralizar el intervalo de encuesta números mágicos",
+        "pl": "refaktor: zastąpić kruchy wzór mixin\nrefactor: zastąpić busy- czekać pętli sondażowej w sendRequest () z bezpośrednim wykorzystaniem łańcucha obietnic\nfix: PLACESECRET Porównanie symboli - teraz zdefiniowane raz na poziomie modułu zamiast per- call\nrefactor: centralizacja interwał ankiety magiczne numery",
+        "uk": "рефактор: замініть фраглільний міксін візерунок\nрефактор: замініть кричущу петлю в sendRequest() з прямим обіцяючим ланцюгом повторного використання\nфіксація: ПЛАЦЕХОЛДЕР Порівняння символів - тепер визначаються один раз на рівні модуля замість задніх\nрефактор: централізоване інтерв'ю з інтервалом магічних чисел",
+        "zh-cn": "重构:替换脆弱的混合图案\n重构:在发送中替换繁忙等待投票的循环,直接重复使用承诺链请求()\n定点: 定位器 符号比较 - 现在在模块级别上定义一次而不是按调用\n重构: 集中民意测验间隔魔法数字"
+      },
       "0.1.14": {
         "en": "Fixed: VenusE/VenusC devices failing polls with \"Method not found\" errors by skipping PV polling for models that don't support PV component (per API documentation, only Venus D/A have PV support)\nrefactor: replace `setStateAsync` with `setState` across codebase for consistency\nchore: adjust polling and timeout configuration ranges in jsonConfig\ndocs: expand README with detailed device support matrix, API component compatibility table, firmware details, and new warnings for Venus E 2.0 connectivity",
         "de": "Behoben: VenusE/VenusC-Geräte scheitern Umfragen mit \"Method nicht gefunden\" Fehlern durch Überspringen von PV-Abfrage für Modelle, die PV-Komponente nicht unterstützen (pro API-Dokumentation haben nur Venus D/A PV-Unterstützung)\nrefactor: `setStateAsync` mit `setState` über Codebase für Konsistenz ersetzen\nchore: Anpassung der Umfrage- und Timeout-Konfigurationsbereiche in jsonConfig\ndocs: erweitern README mit detaillierter Geräteunterstützungsmatrix, API-Komponenten-Kompatibilitätstabelle, Firmware-Details und neuen Warnungen für Venus E 2.0-Konnektivität",
@@ -106,19 +119,6 @@
         "pl": "Usunięto nieprawidłowe wywołanie ES.GetInfo, które powodowało błędy Method not found\nInformacje o urządzeniu są teraz uzyskiwane wyłącznie podczas odnajdywania",
         "uk": "Видалено невірний виклик ES.GetInfo, який спричиняв помилки Method not found\nІнформація про пристрій тепер отримується виключно під час виявлення",
         "zh-cn": "移除了导致 Method not found 错误的无效 ES.GetInfo 调用\n设备信息现在仅在发现期间获取"
-      },
-      "0.1.4": {
-        "en": "Fixed repository validation issues, updated adapter naming conventions",
-        "de": "Repository-Validierungsprobleme behoben, Adapter-Namenskonventionen aktualisiert",
-        "ru": "Исправлены проблемы проверки репозитория, обновлены соглашения об именовании адаптеров",
-        "pt": "Corrigidos problemas de validação do repositório, atualizadas convenções de nomenclatura do adaptador",
-        "nl": "Repository-validatieproblemen opgelost, adapter naamgevingsconventies bijgewerkt",
-        "fr": "Corrigé les problèmes de validation du dépôt, mis à jour les conventions de nommage des adaptateurs",
-        "it": "Risolti problemi di validazione del repository, aggiornate le convenzioni di denominazione dell'adapter",
-        "es": "Corregidos problemas de validación del repositorio, actualizadas convenciones de nomenclatura del adaptador",
-        "pl": "Naprawiono problemy z walidacją repozytorium, zaktualizowano konwencje nazewnictwa adaptera",
-        "uk": "Виправлено проблеми перевірки репозиторію, оновлено угоди про найменування адаптерів",
-        "zh-cn": "修复了存储库验证问题，更新了适配器命名规范"
       }
     },
     "icon": "marstek-venus.png",
