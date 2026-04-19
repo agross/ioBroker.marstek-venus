@@ -350,10 +350,10 @@ describe("MarstekVenusAdapter", function () {
 			mockSocket.send.resetHistory();
 			const promise = adapter.sendRequest("ES.GetStatus");
 			clock.tick(1);
-			clock.tick(5000);
+			clock.tick(5001);
 			expect(mockSocket.send.callCount).to.equal(2);
-			clock.tick(5000);
-			clock.tick(5000);
+			clock.tick(5001);
+			clock.tick(5001);
 			try {
 				await promise;
 			} catch {
@@ -786,6 +786,26 @@ describe("MarstekVenusAdapter", function () {
 
 		it("hasPVSupport returns false for VenusC", () => {
 			adapter._discoveredDeviceModel = "VenusC";
+			expect(adapter.hasPVSupport()).to.be.false;
+		});
+
+		it("hasPVSupport returns true for VenusD 3.0", () => {
+			adapter._discoveredDeviceModel = "VenusD 3.0";
+			expect(adapter.hasPVSupport()).to.be.true;
+		});
+
+		it("hasPVSupport returns true for VenusA 3.0", () => {
+			adapter._discoveredDeviceModel = "VenusA 3.0";
+			expect(adapter.hasPVSupport()).to.be.true;
+		});
+
+		it("hasPVSupport returns false for VenusE 3.0", () => {
+			adapter._discoveredDeviceModel = "VenusE 3.0";
+			expect(adapter.hasPVSupport()).to.be.false;
+		});
+
+		it("hasPVSupport returns false for VenusC 3.0", () => {
+			adapter._discoveredDeviceModel = "VenusC 3.0";
 			expect(adapter.hasPVSupport()).to.be.false;
 		});
 
