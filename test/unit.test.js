@@ -194,7 +194,7 @@ describe("MarstekVenusAdapter", function () {
 	});
 
 	describe("Lifecycle methods", () => {
-		describe("onReady()", () => {
+			describe("onReady()", () => {
 			it("initializes states and creates socket", async () => {
 				await adapter.onReady();
 
@@ -593,6 +593,32 @@ describe("MarstekVenusAdapter", function () {
 								enable: 0,
 							}),
 						}),
+					}),
+				),
+			).to.be.true;
+		});
+
+		it("handles Ups mode using ups_cfg", async () => {
+			await adapter.onStateChange("control.mode", { val: "Ups", ack: false });
+
+			expect(
+				adapter.sendRequest.calledWith(
+					"ES.SetMode",
+					sinon.match({
+						config: { mode: "Ups", ups_cfg: { enable: 1 } },
+					}),
+				),
+			).to.be.true;
+		});
+
+		it("normalizes UPS mode to Ups", async () => {
+			await adapter.onStateChange("control.mode", { val: "UPS", ack: false });
+
+			expect(
+				adapter.sendRequest.calledWith(
+					"ES.SetMode",
+					sinon.match({
+						config: { mode: "Ups", ups_cfg: { enable: 1 } },
 					}),
 				),
 			).to.be.true;

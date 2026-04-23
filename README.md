@@ -254,6 +254,7 @@ SOFTWARE.
 - verified timeout configuration values across all polling loops and request handling
 - fix discovery API request handling by sending only documented `Marstek.GetDevice` payload (`ble_mac: "0"`) and improving unmatched API error logging
 - implement missing Rev 2.0 writable endpoints: `DOD.SET`, `Ble.Adv`, and `Led.Ctrl`; update API implementation documentation
+- fix `ES.SetMode` mode normalization by supporting `Ups`/`UPS` mapping and rejecting unsupported mode values before sending
 
 ### 0.1.15 (2026-04-19)
 - refactor: replace fragile mixin pattern 
