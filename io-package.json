@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "marstek-venus",
-    "version": "0.1.15",
+    "version": "0.1.16",
     "titleLang": {
       "en": "Marstek Venus Energy Storage",
       "de": "Marstek Venus Energiespeicher",
@@ -29,6 +29,19 @@
       "zh-cn": "Marstek Venus A/C/D/E 储能设备适配器"
     },
     "news": {
+      "0.1.16": {
+        "en": "fix: remove duplicate ES.GetStatus requests — fast poll and normal poll no longer both call the same API method\nfix: remove internal retry loop from sendRequest that bypassed rate-limit queue, causing unthrottled request bursts on timeout\nfeat: configurable API endpoints — each polling endpoint (ES, Battery, EM, Mode, PV, Wifi, BLE) can be enabled/disabled in the admin config UI to reduce device load",
+        "de": "fix: Entfernen Sie doppelt ES. GetStatus-Anfragen – schnelle Umfrage und normale Umfrage rufen nicht mehr beide die gleiche API-Methode an\nfix: Entfernen Sie die interne Retry-Schleife von sendRequest, dass umgangene Rate-Limit-Schlange, wodurch ungedrosselte Anfrage Bursts auf Timeout\nfeat: konfigurierbare API-Endpunkte – jeder Wahlendpunkt (ES, Batterie, EM, Mode, PV, Wifi, BLE) kann in der Admin-Konfiguration UI aktiviert/deaktiviert werden, um die Gerätelast zu reduzieren",
+        "ru": "удалить дубликат ES. Запросы GetStatus — быстрый и нормальный опрос больше не называют один и тот же метод API\nисправление: удалите внутреннюю петлю повторного запроса из sendRequest, которая обходила очередь с ограничением скорости, вызывая всплески запроса в тайм-ауте\nподвиг: конфигурируемые конечные точки API — каждая конечная точка опроса (ES, Battery, EM, Mode, PV, Wifi, BLE) может быть включена / отключена в интерфейсе конфигурирования администратора для уменьшения нагрузки на устройство",
+        "pt": "correção: remover ES duplicado. Solicitações GetStatus — pesquisa rápida e pesquisa normal não chamam mais o mesmo método API\ncorrigir: remover o loop de retry interno do sendRequest que a fila de limite de taxa contornada, causando rompimentos de requisição sem aceleração no timeout\nfeat: endpoints configuráveis da API — cada endpoint de votação (ES, Bateria, EM, Modo, PV, Wifi, BLE) pode ser ativado/desativado na interface de configuração do administrador para reduzir a carga do dispositivo",
+        "nl": "fix: verwijder dubbele ES. GetStatus vraagt snelle poll en normale poll niet meer allebei bellen dezelfde API methode\nfix: verwijder interne retry lus van sendRequest die omzeilde snelheid-limit wachtrij, waardoor niet-gestroomd verzoek barsten op timeout\nfeat: configureerbare API-eindpunten: elk peilingseindpunt (ES, Batterij, EM, Mode, PV, Wifi, BLE) kan worden ingeschakeld/ uitgeschakeld in de admin configuratie UI om de apparaatbelasting te verminderen",
+        "fr": "correction : supprimer le duplicata ES. GetStatus requests — le sondage rapide et le sondage normal n'appellent plus la même méthode d'API\ncorrection : supprimer la boucle interne de réessayer de sendRequest qui contournait la file d'attente de la limite tarifaire, causant des éclatements de requête non ébranlés au moment de l'arrêt\nfeat: les paramètres d'API configurables — chaque paramètre de sondage (ES, Batterie, EM, Mode, PV, Wifi, BLE) peuvent être activés/désactivés dans l'interface de configuration d'administration pour réduire la charge du périphérique",
+        "it": "fix: rimuovere doppio ES. GetStatus richieste — sondaggio rapido e sondaggio normale non più entrambi chiamano lo stesso metodo API\nfix: rimuovere l'anello di riprovazione interno da sendRequest che ha bypassato la coda di limite di velocità, causando unthrottled richiesta scoppia su timeout\nfeat: endpoint API configurabili — ogni endpoint polling (ES, Battery, EM, Mode, PV, Wifi, BLE) può essere abilitato/disattivato nell'interfaccia utente di configurazione di admin per ridurre il carico del dispositivo",
+        "es": "fijación: eliminar ES duplicado. Solicitudes de GetStatus — encuesta rápida y votación normal ya no llaman el mismo método API\nfijación: eliminar el bucle de retry interno de sendRequest that bypassed rate-limit queue, lo que causa una petición sin trabas estalla en el tiempo de salida\nfeat: terminales de API configurables — cada punto final de votación (ES, batería, EM, modo, PV, Wifi, BLE) puede ser habilitado/desactivado en el UI de configuración de administración para reducir la carga del dispositivo",
+        "pl": "fix: usunąć duplikat ES. Prośby GetStatus - szybkie ankiety i normalne ankiety nie są już nazywane tą samą metodą API\nfix: usunąć wewnętrzną pętlę retry z sendRequest, że pominięta kolejka rate- limit, powodując nieograniczonego pęknięcia żądania w timeout\nfeat: konfigurowalne punkty końcowe API - każdy punkt końcowy sondażu (ES, Battery, EM, Mode, PV, Wifi, BLE) może być włączony / wyłączony w konfigu administracyjnym, aby zmniejszyć obciążenie urządzenia",
+        "uk": "виправити: видалити дублікати ES. Запити GetStatus — швидке опитування та нормальне опитування більше, ніж один метод API\nвиправити: видалити внутрішню петлю з відправкиЗапитання, що обходжена черга, викликаючи небажаний запит лопається на час\nfeat: configurable API endpoints — кожен кінцевий пункт опитування (ES, Батарея, EM, режим, ПВ, Wifi, BLE) може бути включений/розміщений в конфігурації адміністратора UI для зменшення навантаження пристрою",
+        "zh-cn": "固定:删除重复的ES。 Get Status 请求——快速民调和普通民调不再使用相同的API方法\n固定 : 从发送中移除内部重试循环 请求绕过速率限制队列, 导致超时时未按键请求串流\n成就:可配置的 API 端点——每个投票端点(ES,电池,EM,Mode,PV,Wifi,BLE)可以在管理员配置 UI中启用/失效以减少设备负载"
+      },
       "0.1.15": {
         "en": "refactor: replace fragile mixin pattern \nrefactor: replace busy-wait polling loop in sendRequest() with direct promise chain reuse\nfix: PLACEHOLDER Symbol comparison - now defined once at module level instead of per-call\nrefactor: centralize poll interval magic numbers",
         "de": "refactor: fragiles mischmuster ersetzen\nrefactor: ersetzen Sie die befahrene Umfrageschleife in sendRequest() durch direkte Versprechungskette Wiederverwendung\nfix: PLACEHOLDER Symbol-Vergleich - jetzt einmal auf Modulebene anstatt per-Call definiert\nrefactor: zentralisieren sie umfrageintervall magische zahlen",
@@ -106,19 +119,6 @@
         "pl": "problemy z sprawdzaniem adaptera",
         "uk": "виправити проблеми перевірки адаптера",
         "zh-cn": "固定适配器检查器问题"
-      },
-      "0.1.6": {
-        "en": "Removed invalid ES.GetInfo call which was causing Method not found errors\nDevice information is now obtained exclusively during discovery",
-        "de": "Ungültiger ES.GetInfo-Aufruf entfernt, der Method not found-Fehler verursachte\nGeräteinformationen werden jetzt ausschließlich während der Erkennung abgerufen",
-        "ru": "Удален неверный вызов ES.GetInfo, вызывавший ошибки Method not found\nИнформация об устройстве теперь получается исключительно во время обнаружения",
-        "pt": "Removida chamada ES.GetInfo inválida que estava causando erros Method not found\nInformações do dispositivo agora são obtidas exclusivamente durante a descoberta",
-        "nl": "Ongeldige ES.GetInfo-aanroep verwijderd die Method not found-fouten veroorzaakte\nApparaatinformatie wordt nu uitsluitend verkregen tijdens detectie",
-        "fr": "Supprimé l'appel ES.GetInfo invalide qui causait des erreurs Method not found\nLes informations sur l'appareil sont désormais obtenues exclusivement lors de la découverte",
-        "it": "Rimosso chiamata ES.GetInfo non valida che causava errori Method not found\nLe informazioni sul dispositivo vengono ora ottenute esclusivamente durante la scoperta",
-        "es": "Eliminada llamada ES.GetInfo no válida que causaba errores Method not found\nLa información del dispositivo ahora se obtiene exclusivamente durante el descubrimiento",
-        "pl": "Usunięto nieprawidłowe wywołanie ES.GetInfo, które powodowało błędy Method not found\nInformacje o urządzeniu są teraz uzyskiwane wyłącznie podczas odnajdywania",
-        "uk": "Видалено невірний виклик ES.GetInfo, який спричиняв помилки Method not found\nІнформація про пристрій тепер отримується виключно під час виявлення",
-        "zh-cn": "移除了导致 Method not found 错误的无效 ES.GetInfo 调用\n设备信息现在仅在发现期间获取"
       }
     },
     "icon": "marstek-venus.png",
