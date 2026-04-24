@@ -185,7 +185,7 @@ class MarstekVenusAdapter extends utils.Adapter {
 	 * @param maxRetries
 	 */
 	async sendRequestWithRetry(method, params = {}, maxRetries) {
-		const retries = maxRetries !== undefined ? maxRetries : (this.config.maxRetries || DEFAULT_MAX_RETRIES);
+		const retries = maxRetries !== undefined ? maxRetries : this.config.maxRetries || DEFAULT_MAX_RETRIES;
 		let lastError;
 		for (let attempt = 0; attempt < retries; attempt++) {
 			try {
