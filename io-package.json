@@ -172,7 +172,14 @@
     "fastPollInterval": 35000,
     "requestTimeout": 7000,
     "maxRetries": 3,
-    "autoDiscovery": true
+    "autoDiscovery": true,
+    "enableESStatus": true,
+    "enableBatteryStatus": true,
+    "enableEMStatus": true,
+    "enableModeStatus": true,
+    "enablePVStatus": true,
+    "enableWifiStatus": true,
+    "enableBLEStatus": true
   },
   "instanceObjects": [
     {

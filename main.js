@@ -16,8 +16,6 @@ const {
 	REQUEST_ID_WRAP,
 } = require("./lib/constants");
 
-const PENDING_SYMBOL = Symbol("pending");
-
 /**
  *
  */
@@ -141,7 +139,6 @@ class MarstekVenusAdapter extends utils.Adapter {
 			return existing;
 		}
 
-		const maxRetries = this.config.maxRetries || DEFAULT_MAX_RETRIES;
 		const timeoutMs = this.config.requestTimeout || DEFAULT_REQUEST_TIMEOUT;
 		const id = this._requestId++;
 		if (this._requestId > REQUEST_ID_WRAP) {
@@ -153,50 +150,56 @@ class MarstekVenusAdapter extends utils.Adapter {
 		const promise = this._requestQueue.enqueue(
 			() =>
 				new Promise((resolve, reject) => {
-					let retryCount = 0;
+					const timeout = this.setTimeout(() => {
+						this._pendingRequests.delete(id);
+						this._pendingRequestsByMethod.delete(method);
+						this.log.warn(`sendRequest ${method} timed out after ${timeoutMs}ms`);
+						reject(new Error(`Request ${method} timed out`));
+					}, timeoutMs);
 
-					const sendOnce = () => {
-						const timeout = this.setTimeout(() => {
-							const pending = this._pendingRequests.get(id);
-							if (!pending) {
-								return;
-							}
+					this._pendingRequests.set(id, { resolve, reject, timeout, method });
 
-							retryCount++;
-							if (retryCount < maxRetries) {
-								this.log.debug(`Retry ${retryCount}/${maxRetries} for ${method}`);
-								this.setTimeout(() => sendOnce(), 0);
-							} else {
-								this._pendingRequests.delete(id);
-								this._pendingRequestsByMethod.delete(method);
-								this.log.warn(`sendRequest ${method} failed after ${retryCount} attempts`);
-								reject(new Error(`Request ${method} timed out after ${retryCount} attempts`));
-							}
-						}, timeoutMs);
-
-						this._pendingRequests.set(id, { resolve, reject, timeout, method });
-
-						this.log.debug(
-							`Sending ${method} to ${targetIP}:${this.config.udpPort} (attempt ${retryCount + 1}/${maxRetries})`,
-						);
-						this._socket.send(message, 0, message.length, this.config.udpPort, targetIP, err => {
-							if (err) {
-								this.clearTimeout(timeout);
-								this._pendingRequests.delete(id);
-								this._pendingRequestsByMethod.delete(method);
-								this.log.error(`sendRequest ${method} to ${targetIP} send error: ${err.message}`);
-								reject(err);
-							}
-						});
-					};
-
-					this._pendingRequestsByMethod.set(method, PENDING_SYMBOL);
-					sendOnce();
+					this.log.debug(`Sending ${method} to ${targetIP}:${this.config.udpPort}`);
+					this._socket.send(message, 0, message.length, this.config.udpPort, targetIP, err => {
+						if (err) {
+							this.clearTimeout(timeout);
+							this._pendingRequests.delete(id);
+							this._pendingRequestsByMethod.delete(method);
+							this.log.error(`sendRequest ${method} to ${targetIP} send error: ${err.message}`);
+							reject(err);
+						}
+					});
 				}),
 		);
 
 		this._pendingRequestsByMethod.set(method, promise);
 		return promise;
+	}
+
+	/**
+	 * Send a request with retries (for control/write commands).
+	 * Each retry goes through the rate-limit queue.
+	 *
+	 * @param method
+	 * @param params
+	 * @param maxRetries
+	 */
+	async sendRequestWithRetry(method, params = {}, maxRetries) {
+		const retries = maxRetries !== undefined ? maxRetries : (this.config.maxRetries || DEFAULT_MAX_RETRIES);
+		let lastError;
+		for (let attempt = 0; attempt < retries; attempt++) {
+			try {
+				return await this.sendRequest(method, params);
+			} catch (err) {
+				lastError = err;
+				if (attempt < retries - 1) {
+					const delay = 500 * Math.pow(2, attempt);
+					this.log.debug(`Retry ${attempt + 1}/${retries} for ${method} in ${delay}ms`);
+					await new Promise(resolve => this.setTimeout(resolve, delay));
+				}
+			}
+		}
+		throw lastError;
 	}
 
 	/**
@@ -267,14 +270,18 @@ class MarstekVenusAdapter extends utils.Adapter {
 	 *
 	 */
 	startFastPolling() {
+		if (this.config.enableESStatus === false) {
+			this.log.info("Fast polling disabled - ES.GetStatus not enabled in config");
+			return;
+		}
 		const fastInterval = this.config.fastPollInterval || DEFAULT_FAST_POLL_INTERVAL;
 		this.log.info(`Starting fast polling loop (every ${fastInterval}ms)`);
 		if (this._fastPollTimer) {
 			this.clearInterval(this._fastPollTimer);
 			this._fastPollTimer = null;
 		}
-		this._fastPollTimer = this.setInterval(() => this.pollPower(), fastInterval);
-		this.pollPower();
+		this._fastPollTimer = this.setInterval(() => this.pollESStatus(), fastInterval);
+		this.pollESStatus();
 	}
 
 	/**
@@ -297,6 +304,10 @@ class MarstekVenusAdapter extends utils.Adapter {
 	 *
 	 */
 	startSlowPolling() {
+		if (this.config.enableWifiStatus === false && this.config.enableBLEStatus === false) {
+			this.log.info("Slow polling disabled - no slow poll endpoints enabled in config");
+			return;
+		}
 		const slowInterval = this.config.slowPollInterval || DEFAULT_SLOW_POLL_INTERVAL;
 		this.log.info(`Starting slow polling loop (every ${slowInterval}ms)`);
 		if (this._slowPollTimer) {
@@ -365,6 +376,13 @@ class MarstekVenusAdapter extends utils.Adapter {
 				Math.min(30000, parseInt(settings.requestTimeout, 10) || DEFAULT_REQUEST_TIMEOUT),
 			);
 			this.config.deviceModel = settings.deviceModel || "";
+			this.config.enableESStatus = settings.enableESStatus !== false;
+			this.config.enableBatteryStatus = settings.enableBatteryStatus !== false;
+			this.config.enableEMStatus = settings.enableEMStatus !== false;
+			this.config.enableModeStatus = settings.enableModeStatus !== false;
+			this.config.enablePVStatus = settings.enablePVStatus !== false;
+			this.config.enableWifiStatus = settings.enableWifiStatus !== false;
+			this.config.enableBLEStatus = settings.enableBLEStatus !== false;
 
 			await this.extendForeignObjectAsync(`system.adapter.${this.namespace}`, {
 				native: {
@@ -376,6 +394,13 @@ class MarstekVenusAdapter extends utils.Adapter {
 					maxRetries: this.config.maxRetries,
 					requestTimeout: this.config.requestTimeout,
 					deviceModel: this.config.deviceModel,
+					enableESStatus: this.config.enableESStatus,
+					enableBatteryStatus: this.config.enableBatteryStatus,
+					enableEMStatus: this.config.enableEMStatus,
+					enableModeStatus: this.config.enableModeStatus,
+					enablePVStatus: this.config.enablePVStatus,
+					enableWifiStatus: this.config.enableWifiStatus,
+					enableBLEStatus: this.config.enableBLEStatus,
 				},
 			});
 
@@ -402,6 +427,13 @@ class MarstekVenusAdapter extends utils.Adapter {
 							maxRetries: this.config.maxRetries,
 							requestTimeout: this.config.requestTimeout,
 							deviceModel: this.config.deviceModel,
+							enableESStatus: this.config.enableESStatus,
+							enableBatteryStatus: this.config.enableBatteryStatus,
+							enableEMStatus: this.config.enableEMStatus,
+							enableModeStatus: this.config.enableModeStatus,
+							enablePVStatus: this.config.enablePVStatus,
+							enableWifiStatus: this.config.enableWifiStatus,
+							enableBLEStatus: this.config.enableBLEStatus,
 						},
 					},
 					obj.callback,
@@ -480,15 +512,6 @@ class MarstekVenusAdapter extends utils.Adapter {
 	async poll() {
 		if (Polling && Polling.poll) {
 			await Polling.poll.call(this);
-		}
-	}
-
-	/**
-	 *
-	 */
-	async pollPower() {
-		if (Polling && Polling.pollPower) {
-			await Polling.pollPower.call(this);
 		}
 	}
 
