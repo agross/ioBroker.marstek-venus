@@ -32,6 +32,7 @@ class MockAdapterBase {
 			debug: sinon.stub(),
 			warn: sinon.stub(),
 			error: sinon.stub(),
+			silly: sinon.stub(),
 		};
 		this.setState = sinon.stub().resolves();
 		this.setStateChangedAsync = sinon.stub().resolves();
