@@ -58,7 +58,7 @@
       "label": "fastPollInterval",
       "min": 5000,
       "max": 60000,
-      "default": 35000,
+      "default": 30000,
       "xs": 12,
       "sm": 6,
       "md": 6,
@@ -69,7 +69,7 @@
       "type": "number",
       "label": "requestTimeout",
       "min": 1000,
-      "max": 30000,
+      "max": 60000,
       "default": 7000,
       "xs": 12,
       "sm": 6,
@@ -77,18 +77,6 @@
       "lg": 4,
       "xl": 3,
       "newLine": true
-    },
-    "maxRetries": {
-      "type": "number",
-      "label": "maxRetries",
-      "min": 0,
-      "max": 10,
-      "default": 3,
-      "xs": 12,
-      "sm": 6,
-      "md": 6,
-      "lg": 4,
-      "xl": 3
     },
     "autoDiscovery": {
       "type": "checkbox",
