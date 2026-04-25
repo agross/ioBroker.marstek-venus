@@ -250,8 +250,6 @@ SOFTWARE.
 ## Changelog
 ### **WORK IN PROGRESS**
 - fix: use `ongrid_power`/`offgrid_power` from `ES.GetMode` response to update `power.grid`/`power.load` (closes #26)
-- test: update unit tests to match reduced `setObjectNotExistsAsync` call count after removing unused PV states
-- docs: add ESLint, i18n translation, and JSONConfig admin-UI setup instructions to AGENTS.md
 - chore: remove unused `power.pvVoltage` and `power.pvCurrent` states from adapter and documentation
 
 ### 0.1.17 (2026-04-24)
@@ -273,11 +271,6 @@ SOFTWARE.
 - refactor: replace `setStateAsync` with `setState` across codebase for consistency
 - chore: adjust polling and timeout configuration ranges in jsonConfig
 - docs: expand README with detailed device support matrix, API component compatibility table, firmware details, and new warnings for Venus E 2.0 connectivity
-
-### 0.1.13 (2026-04-12)
-- Added Venus A device support to adapter descriptions
-- Updated all documentation to include Venus A in the supported devices list
-- Fix: validate and sanitize all `setSettings` input values (type coercion, numeric range clamping, IP whitespace trim) to prevent security issues
 
 ## Support
 
