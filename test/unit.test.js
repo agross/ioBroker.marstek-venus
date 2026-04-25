@@ -1146,6 +1146,49 @@ describe("MarstekVenusAdapter", function () {
 			expect(adapter.setStateChangedAsync.calledWith("control.mode", { val: "AI", ack: true })).to.be.true;
 		});
 
+		it("pollModeStatus updates power states", async () => {
+			adapter.sendRequest = sandbox.stub().resolves({
+				ongrid_power: 123,
+				offgrid_power: 456,
+			});
+
+			await adapter.pollModeStatus();
+
+			expect(adapter.setStateChangedAsync.calledWith("power.grid", { val: 123, ack: true })).to.be.true;
+			expect(adapter.setStateChangedAsync.calledWith("power.load", { val: 456, ack: true })).to.be.true;
+
+			expect(adapter.setStateChangedAsync.calledWith("energymeter.powerA", sinon.match.any)).to.be.false;
+			expect(adapter.setStateChangedAsync.calledWith("energymeter.powerB", sinon.match.any)).to.be.false;
+			expect(adapter.setStateChangedAsync.calledWith("energymeter.powerC", sinon.match.any)).to.be.false;
+		});
+
+		it("pollModeStatus does not update phase states if no CT is connected", async () => {
+			adapter.sendRequest = sandbox.stub().resolves({
+				ct_state: 0,
+			});
+
+			await adapter.pollModeStatus();
+
+			expect(adapter.setStateChangedAsync.calledWith("energymeter.powerA", sinon.match.any)).to.be.false;
+			expect(adapter.setStateChangedAsync.calledWith("energymeter.powerB", sinon.match.any)).to.be.false;
+			expect(adapter.setStateChangedAsync.calledWith("energymeter.powerC", sinon.match.any)).to.be.false;
+		});
+
+		it("pollModeStatus updates phase states if CT is connected", async () => {
+			adapter.sendRequest = sandbox.stub().resolves({
+				ct_state: 1,
+				a_power: 1,
+				b_power: 2,
+				c_power: 3,
+			});
+
+			await adapter.pollModeStatus();
+
+			expect(adapter.setStateChangedAsync.calledWith("energymeter.powerA", { val: 1, ack: true })).to.be.true;
+			expect(adapter.setStateChangedAsync.calledWith("energymeter.powerB", { val: 2, ack: true })).to.be.true;
+			expect(adapter.setStateChangedAsync.calledWith("energymeter.powerC", { val: 3, ack: true })).to.be.true;
+		});
+
 		it("pollModeStatus handles null mode", async () => {
 			adapter.sendRequest = sandbox.stub().resolves({});
 
